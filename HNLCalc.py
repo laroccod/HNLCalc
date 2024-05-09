@@ -1,17 +1,81 @@
-import numpy as np
-from src.foresee import Utility, Foresee
 import sympy as smp
 import mpmath as mp
-from os import listdir
 import glob
 import os
 from os.path import exists
 import pandas as pd
 from decimal import *
 import scipy.integrate as integrate
-
+import numpy as np
+from matplotlib import pyplot as plt
+import math
+import random
+import time
+import types
+from skhep.math.vectors import LorentzVector, Vector3D
 from scipy import interpolate
+from matplotlib import gridspec
+from numba import jit
+from particle import Particle
 
+
+
+
+class Utility():
+
+    ###############################
+    #  Hadron Masses, lifetimes etc
+    ###############################
+
+    def charges(self, pid):
+        try:
+            charge = Particle.from_pdgid(int(pid)).charge
+        except:
+            charge = 0.0
+        return charge if charge!=None else 0.0
+
+    def masses(self,pid,mass=0):
+        pidabs = abs(int(pid))
+        #Treat select entries separately
+        if   pidabs==0: return mass
+        elif pidabs==4: return 1.5   #GeV, scikit-particle returns 1.27 for c quark
+        elif pidabs==5: return 4.5   #GeV, scikit-particle returns 4.18 for b quark
+        #General case: fetch values from scikit-particle
+        else:
+            mret = Particle.from_pdgid(pidabs).mass   #MeV
+            return mret*0.001 if mret!=None else 0.0  #GeV
+
+    def ctau(self,pid):
+        pidabs = abs(int(pid))
+        ctau = 0.0
+        try:
+            ctau = Particle.from_pdgid(pidabs).ctau
+        except:
+            print('WARNING '+str(pid)+' ctau not obtained from scikit-particle')
+        if pidabs in [2212]: ctau=8.51472e+48  #Avoid inf return value in code
+        return ctau*0.001
+
+    def widths(self, pid):
+        width = 0.0
+        try:
+            width = Particle.from_pdgid(int(pid)).width
+        except:
+            print('WARNING '+str(pid)+' width not obtained from scikit-particle, returning 0')
+        return width*1e-6 if width!=None else 0.0
+
+    ###############################
+    #  Utility Functions
+    ###############################
+
+    #function that reads a table in a .txt file and converts it to a numpy array
+    def readfile(self,filename):
+        array = []
+        with open(filename) as f:
+            for line in f:
+                if line[0]=="#":continue
+                words = [float(elt.strip()) for elt in line.split( )]
+                array.append(words)
+        return np.array(array)
 
 
 
@@ -2095,7 +2159,7 @@ plot_labels_neut = {
         
         'vtau': r'$\nu_\tau$',
         anti('vtau'): r'$\overline{\nu}_\tau$',
-        'nu':'$\nu$',
+        'nu':r'$\nu$',
     
         #Pseudos
         'pi+':r'$\pi$',
@@ -2107,6 +2171,14 @@ plot_labels_neut = {
         anti('K+'): r'$K$',
     
         'eta': r'$\eta$',
+
+        'etap': r'$\eta\prime$',
+
+        'D+': r'$D$',
+        anti('D+'): r'$D$',
+
+        'Ds+': r'$D_s$',
+        anti('Ds+'): r'$D_s$',
     
         #Vectors
         'rho+':r'$\rho$',
@@ -2118,7 +2190,11 @@ plot_labels_neut = {
         anti('K+*'):r'$K^{*}$',
     
         'omega':r'$\omega$',
-        
+
+        'phi': r'$\phi$',
+
+        #hadrons
+        'had': r'$(\geq3H)$',
         #Quarks
         'd': r'$d$',
         anti('d'): r'$\overline{d}$',
