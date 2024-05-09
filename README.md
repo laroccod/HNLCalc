@@ -2,7 +2,7 @@
 
 **By Alec Hewitt and Daniel La Rocco**
 
-[![arXiv]()
+[![arXiv](https://arxiv.org)
 
 ## Introduction
 
@@ -19,5 +19,5 @@ If you have any questions, please write us at [ahewitt1@uci.edu](ahewitt1@uci.ed
 
 ### References 
 
-- HNL Production: [0705.1729]([https://arxiv.org/abs/1811.12522](https://arxiv.org/abs/0705.1729))
+- HNL Production: [0705.1729](https://arxiv.org/abs/0705.1729)
 - HNL Decay: [1812.09139](https://arxiv.org/abs/1812.09139)
