@@ -1077,17 +1077,17 @@ class HeavyNeutralLepton(Utility):
         for description, pid_had, sign_lep in channels_2body:
             for pid_lep in ["11","13","15"]:
                 if self.vcoupling[pid_lep] <1e-9: continue
-                generator = self.generators[abs(int(pid_had))]
+                #generator = self.generators[abs(int(pid_had))]
                 label= "2body_" + pid_had + "_" + sign_lep+pid_lep
                 br = self.get_2body_br(pid_had, sign_lep+pid_lep)
-                output.append([label, pid_had, sign_lep+pid_lep, br, generator, description.replace("l",lep[pid_lep])])
+                output.append([label, pid_had, sign_lep+pid_lep, br , description.replace("l",lep[pid_lep])])
 
         for description, pid_tau, pid_had, sign_had in channels_2body_tau:
                 if self.vcoupling["15"] <1e-9: continue
-                generator = self.generators[15]
+                #generator = self.generators[15]
                 label= "2body_tau_" + pid_tau + "_" + sign_had+pid_had
                 br = self.get_2body_br_tau(pid_tau, sign_had+pid_had)
-                output.append([label, pid_tau, sign_had+pid_had, br, generator, description.replace("l",lep[pid_lep])])
+                output.append([label, pid_tau, sign_had+pid_had, br , description.replace("l",lep[pid_lep])])
 
         return output
 
@@ -1201,10 +1201,10 @@ class HeavyNeutralLepton(Utility):
             for pid_lep in ["11","13","15"]:
                 if self.vcoupling[pid_lep] <1e-9: continue
                 integration = "dq2dE"
-                generator = self.generators[abs(int(pid_parent))]
+                #generator = self.generators[abs(int(pid_parent))]
                 label = "3body_pseudo_" + pid_parent + "_" +pid_daughter+ "_" + sign_lep+pid_lep
                 br =  self.get_3body_dbr_pseudoscalar(pid_parent,pid_daughter,sign_lep+pid_lep)
-                output.append([label, pid_parent,pid_daughter,sign_lep+pid_lep, br, generator,integration, description.replace("l",lep[pid_lep])])
+                output.append([label, pid_parent,pid_daughter,sign_lep+pid_lep, br,integration, description.replace("l",lep[pid_lep])])
         
 
         #Vector
@@ -1212,10 +1212,10 @@ class HeavyNeutralLepton(Utility):
             for pid_lep in ["11","13","15"]:
                 if self.vcoupling[pid_lep] <1e-9: continue
                 integration = "dq2dE"
-                generator = self.generators[abs(int(pid_parent))]
+                #generator = self.generators[abs(int(pid_parent))]
                 label = "3body_vector_" + pid_parent + "_" +pid_daughter+ "_" + sign_lep+pid_lep
                 br =  self.get_3body_dbr_vector(pid_parent,pid_daughter,sign_lep+pid_lep)
-                output.append([label, pid_parent,pid_daughter,sign_lep+pid_lep, br, generator,integration, description.replace("l",lep[pid_lep])])
+                output.append([label, pid_parent,pid_daughter,sign_lep+pid_lep, br,integration, description.replace("l",lep[pid_lep])])
         
         
         
@@ -1225,10 +1225,10 @@ class HeavyNeutralLepton(Utility):
                 for pid_lep in ["11","13"]:
                     if self.vcoupling[pid_lep] <1e-9: continue
                     integration = "dE"
-                    generator = self.generators[abs(int(pid_parent))]
+                    #generator = self.generators[abs(int(pid_parent))]
                     label = "3body_tau_" + pid_parent + "_" +sign_lep+pid_lep+ "_" + pid_nu
                     br =  self.get_3body_dbr_tau(pid_parent,sign_lep+pid_lep,pid_nu)
-                    output.append([label, pid_parent,sign_lep+pid_lep,pid_nu, br, generator,integration, description.replace("l",lep[pid_lep])])
+                    output.append([label, pid_parent,sign_lep+pid_lep,pid_nu, br,integration, description.replace("l",lep[pid_lep])])
             
         
 
@@ -1237,10 +1237,10 @@ class HeavyNeutralLepton(Utility):
                     pid_nu = str(int(pid_lep)+1)
                     if self.vcoupling["15"] <1e-9: continue
                     integration = "dE"
-                    generator = self.generators[abs(int(pid_parent))]
+                    #generator = self.generators[abs(int(pid_parent))]
                     label = "3body_tau_" + pid_parent + "_" +sign_lep+pid_lep+ "_" + pid_nu
                     br =  self.get_3body_dbr_tau(pid_parent,sign_lep+pid_lep,pid_nu)
-                    output.append([label, pid_parent,sign_lep+pid_lep,pid_nu, br, generator,integration, description.replace("l",lep[pid_lep])])
+                    output.append([label, pid_parent,sign_lep+pid_lep,pid_nu, br,integration, description.replace("l",lep[pid_lep])])
             
         return output
 
@@ -2277,4 +2277,140 @@ def conjugate(x):
     return tuple(conj_mode)
     
  
-     
+class Production():
+    def __init__(self):
+        self.mode = None
+
+    def twobody_decay(self, p0, m0, m1, m2, phi, costheta):
+        """
+        function that decays p0 > p1 p2 and returns p1,p2
+        """
+
+        #get axis of p0
+        zaxis=Vector3D(0,0,1)
+        rotaxis=zaxis.cross(p0.vector).unit()
+        rotangle=zaxis.angle(p0.vector)
+
+        #energy and momentum of p2 in the rest frame of p0
+        energy1   = (m0*m0+m1*m1-m2*m2)/(2.*m0)
+        energy2   = (m0*m0-m1*m1+m2*m2)/(2.*m0)
+        momentum1 = math.sqrt(energy1*energy1-m1*m1)
+        momentum2 = math.sqrt(energy2*energy2-m2*m2)
+
+        #4-momentum of p1 and p2 in the rest frame of p0
+        en1 = energy1
+        pz1 = momentum1 * costheta
+        py1 = momentum1 * math.sqrt(1.-costheta*costheta) * np.sin(phi)
+        px1 = momentum1 * math.sqrt(1.-costheta*costheta) * np.cos(phi)
+        p1=LorentzVector(-px1,-py1,-pz1,en1)
+        if rotangle!=0: p1=p1.rotate(rotangle,rotaxis)
+
+        en2 = energy2
+        pz2 = momentum2 * costheta
+        py2 = momentum2 * math.sqrt(1.-costheta*costheta) * np.sin(phi)
+        px2 = momentum2 * math.sqrt(1.-costheta*costheta) * np.cos(phi)
+        p2=LorentzVector(px2,py2,pz2,en2)
+        if rotangle!=0: p2=p2.rotate(rotangle,rotaxis)
+
+        #boost p2 in p0 restframe
+        p1_=p1.boost(-1.*p0.boostvector)
+        p2_=p2.boost(-1.*p0.boostvector)
+        return p1_,p2_
+
+    def decay_in_restframe_2body(self, br,coupling, m0, m1, m2, nsample):
+        self=Utility()
+        mass=m2
+        # prepare output
+        particles, weights = [], []
+
+        #create parent 4-vector
+        p_mother=LorentzVector(0,0,0,m0)
+
+        #MC sampling of angles
+        for i in range(nsample):
+            cos =random.uniform(-1.,1.)
+            phi =random.uniform(-math.pi,math.pi)
+            p_1,p_2=Production().twobody_decay(p_mother,m0,m1,m2,phi,cos)
+            particles.append(p_2)
+            weights.append(eval(br)/nsample)
+
+        return particles,weights
+    
+    def decay_in_restframe_3body_dq2dE(self,br, coupling, m0, m1, m2, m3, nsample):
+        self=Utility()
+
+        # prepare output
+        particles, weights = [], []
+
+        #integration boundary
+        q2min,q2max = (m2+m3)**2,(m0-m1)**2
+        mass = m3
+
+        integral=0
+        for i in range(nsample):
+
+            # sample q2
+            q2 = random.uniform(q2min,q2max)
+            q  = math.sqrt(q2)
+
+            # sample energy
+            E2st = (q**2 - m2**2 + m3**2)/(2*q)
+            E3st = (m0**2 - q**2 - m1**2)/(2*q)
+            m232min = (E2st + E3st)**2 - (np.sqrt(E2st**2 - m3**2) + np.sqrt(E3st**2 - m1**2))**2
+            m232max = (E2st + E3st)**2 - (np.sqrt(E2st**2 - m3**2) - np.sqrt(E3st**2 - m1**2))**2
+            cthmax = (m232max + q**2 - m2**2 - m1**2)/(2*m0)
+            cthmin = (m232min + q**2 - m2**2 - m1**2)/(2*m0)
+            ENmax = (m232max + q**2 - m2**2 - m1**2)/(2*m0)
+            ENmin = (m232min + q**2 - m2**2 - m1**2)/(2*m0)
+            energy = random.uniform(ENmin,ENmax)
+
+            # get LLP momentum
+            costh = random.uniform(-1,1)
+            sinth = np.sqrt(1-costh**2)
+            phi = random.uniform(-math.pi,math.pi)
+            p = np.sqrt(energy**2-mass**2)
+            p_3 = LorentzVector(p*sinth*np.cos(phi),p*sinth*np.sin(phi),p*costh,energy)
+
+            #branching fraction
+            brval  = eval(br)
+            brval *= (q2max-q2min)*(ENmax-ENmin)/float(nsample)
+
+            #save
+            particles.append(p_3)
+            weights.append(brval)
+
+        return particles,weights
+
+    
+    def decay_in_restframe_3body_dE(self, br, coupling, m0, m1, m2, m3, nsample):
+        self=Utility()
+        # prepare output
+        particles, weights = [], []
+        mass = m3
+
+        #integration boundary
+        emin, emax = m3, (m0**2+m3**2-(m1+m2)**2)/(2*m0)
+
+        #numerical integration
+        integral=0
+        for i in range(nsample):
+
+            #sample energy
+            energy = random.uniform(emin,emax)
+
+            # get LLP momentum
+            costh = random.uniform(-1,1)
+            sinth = np.sqrt(1-costh**2)
+            phi = random.uniform(-math.pi,math.pi)
+            p = np.sqrt(energy**2-mass**2)
+            p_3 = LorentzVector(p*sinth*np.cos(phi),p*sinth*np.sin(phi),p*costh,energy)
+
+            #branching fraction
+            brval  = eval(br)
+            brval *= (emax-emin)/float(nsample)
+
+            #save
+            particles.append(p_3)
+            weights.append(brval)
+
+        return(particles, weights)
