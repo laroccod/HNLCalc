@@ -22,11 +22,11 @@ HNL Production Branching Fractions (only a few):
 <img src="/HNL-3Body-Production.png" style="width:500px;" />
 HNL Decay Branching Fractions: 
 
-<img src="/HNL-Decay.png" style="width:500px;" />
+<img src="/HNL-Decay.png" style="width:800px;" />
 
 HNL Decay Length: 
 
-<img src="/HNL-ctau.png" style="width:500px;" />
+<img src="/HNL-ctau.png" style="width:400px;" />
 
 ### Support
 
