@@ -19,7 +19,7 @@ In the repository, we have included a notebook `Example.ipynb`, which outlines t
 HNL Production Branching Fractions (only a few): 
 
 
-<img src="/HNL-3Body-Production.png" style="zoom:5%;" />
+<img src="/HNL-3Body-Production.png" style="width:200px;" />
 HNL Decay Branching Fractions: 
 
 ![HNL Decay Branching Fractions](/HNL-Decay.png)
