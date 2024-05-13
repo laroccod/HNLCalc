@@ -5,7 +5,7 @@
 
 ## Introduction
 
-We present the package, **HNLCalc**, a fast and fleixble tool which can be used to compute production rates, decay rates, and lifetimes for Heavy Neutral Leptons, a.k.a. Sterile Neutrinos, with arbitrary couplings to the electron, muon, and tau neutrinos. We have implemented over 150 produciton modes and over 100 decay modes, resulting in a comprehensive tool that can be used to study HNL phenomenology for masses up to 10 GeV. 
+We present the package, **HNLCalc**, a fast and flexible tool which can be used to compute production rates, decay rates, and lifetimes for Heavy Neutral Leptons, a.k.a. Sterile Neutrinos, with arbitrary couplings to the electron, muon, and tau neutrinos. We have implemented over 150 produciton modes and over 100 decay modes, resulting in a comprehensive tool that can be used to study HNL phenomenology for masses up to 10 GeV. 
 
 ### Paper
 
