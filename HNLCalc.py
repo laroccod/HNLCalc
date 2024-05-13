@@ -969,10 +969,15 @@ class HNLCalc(Utility):
                 for mode in self.modes_active[channel]: 
                     
                     modes.append(mode)
+
+                    csv_path = f"model/br/"
+
+                    for p in mode: csv_path += f"{p}-"
                     
-                    csv_path = fr"model/br/{channel}/{mode}.csv"
+                
+                
                     
-                    filenames.append(csv_path)
+                    filenames.append(csv_path[:-1]+".csv")
         
         finalstates  = []
         
@@ -1024,15 +1029,16 @@ class HNLCalc(Utility):
                 #generator = self.generators[abs(int(pid_had))]
                 label= "2body_" + pid_had + "_" + sign_lep+pid_lep
                 br = self.get_2body_br(pid_had, sign_lep+pid_lep)
-                output.append([label, pid_had, sign_lep+pid_lep, br , description.replace("l",lep[pid_lep])])
-
+                dic = {'label': label, 'pid0': pid_had, 'pid1':sign_lep+pid_lep, 'br': br , 'description': description.replace("l",lep[pid_lep])}
+                output.append(dic)
         for description, pid_tau, pid_had, sign_had in channels_2body_tau:
                 if self.vcoupling["15"] <1e-9: continue
                 #generator = self.generators[15]
                 label= "2body_tau_" + pid_tau + "_" + sign_had+pid_had
                 br = self.get_2body_br_tau(pid_tau, sign_had+pid_had)
-                output.append([label, pid_tau, sign_had+pid_had, br , description.replace("l",lep[pid_lep])])
-
+                dic = {'label': label, 'pid0': pid_tau, 'pid1':sign_had+pid_had, 'br': br , 'description': description.replace("l",lep[pid_lep])}
+                output.append(dic)
+                
         return output
 
     def get_channels_3body(self,):
@@ -1148,8 +1154,8 @@ class HNLCalc(Utility):
                 #generator = self.generators[abs(int(pid_parent))]
                 label = "3body_pseudo_" + pid_parent + "_" +pid_daughter+ "_" + sign_lep+pid_lep
                 br =  self.get_3body_dbr_pseudoscalar(pid_parent,pid_daughter,sign_lep+pid_lep)
-                output.append([label, pid_parent,pid_daughter,sign_lep+pid_lep, br,integration, description.replace("l",lep[pid_lep])])
-        
+                dic = {'label': label, 'pid0': pid_parent,'pid1': pid_daughter,'pid2': sign_lep+pid_lep, 'br': br,'integration': integration, 'description': description.replace("l",lep[pid_lep])} 
+                output.append(dic)
 
         #Vector
         for description, pid_parent, pid_daughter, sign_lep in channels_vector: 
@@ -1159,8 +1165,8 @@ class HNLCalc(Utility):
                 #generator = self.generators[abs(int(pid_parent))]
                 label = "3body_vector_" + pid_parent + "_" +pid_daughter+ "_" + sign_lep+pid_lep
                 br =  self.get_3body_dbr_vector(pid_parent,pid_daughter,sign_lep+pid_lep)
-                output.append([label, pid_parent,pid_daughter,sign_lep+pid_lep, br,integration, description.replace("l",lep[pid_lep])])
-        
+                dic = {'label': label, 'pid0': pid_parent,'pid1': pid_daughter,'pid2': sign_lep+pid_lep, 'br': br,'integration': integration, 'description': description.replace("l",lep[pid_lep])} 
+                output.append(dic)
         
         
 
@@ -1172,8 +1178,8 @@ class HNLCalc(Utility):
                     #generator = self.generators[abs(int(pid_parent))]
                     label = "3body_tau_" + pid_parent + "_" +sign_lep+pid_lep+ "_" + pid_nu
                     br =  self.get_3body_dbr_tau(pid_parent,sign_lep+pid_lep,pid_nu)
-                    output.append([label, pid_parent,sign_lep+pid_lep,pid_nu, br,integration, description.replace("l",lep[pid_lep])])
-            
+                    dic = {'label': label, 'pid0': pid_parent,'pid1': sign_lep+pid_lep,'pid2': pid_nu, 'br': br,'integration': integration, 'description': description.replace("l",lep[pid_lep])} 
+                    output.append(dic)
         
 
         for description, pid_parent, sign_lep in channels_tau_2: 
@@ -1184,8 +1190,9 @@ class HNLCalc(Utility):
                     #generator = self.generators[abs(int(pid_parent))]
                     label = "3body_tau_" + pid_parent + "_" +sign_lep+pid_lep+ "_" + pid_nu
                     br =  self.get_3body_dbr_tau(pid_parent,sign_lep+pid_lep,pid_nu)
-                    output.append([label, pid_parent,sign_lep+pid_lep,pid_nu, br,integration, description.replace("l",lep[pid_lep])])
-            
+                    dic = {'label': label, 'pid0': pid_parent,'pid1': sign_lep+pid_lep,'pid2': pid_nu, 'br': br,'integration': integration, 'description': description.replace("l",lep[pid_lep])} 
+                    output.append(dic)
+                    
         return output
 
     def get_bounds(self):
@@ -1763,11 +1770,14 @@ class HNLCalc(Utility):
                 df=pd.DataFrame(df_data)
                 
                
-                
-                
-                save_path = f"model/br/{mode}.csv"
+                save_path = f"model/br/"
 
-                df.to_csv(save_path,sep=' ',header=False,index=False)
+                for p in mode: save_path += f"{p}-"
+                    
+                
+                
+
+                df.to_csv(save_path[:-1]+".csv",sep=' ',header=False,index=False)
 
   
 
