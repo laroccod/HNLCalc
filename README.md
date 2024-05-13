@@ -16,7 +16,7 @@ Target Experiments]() provides an overview of the production and decay channels 
 
 In the repository, we have included a notebook `Example.ipynb`, which outlines the basic usage of HNLCalc and can be used to produce plots for HNL production and decay branching fractions as well as decay length. 
 
-![Some HNL 3-body Branching Fractions](/assets/images/HNL-Decay.png)
+![Some HNL 3-body Branching Fractions](/HNL-Decay.png)
 
 ### Support
 
