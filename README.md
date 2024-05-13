@@ -2,7 +2,6 @@
 
 **By Alec Hewitt and Daniel La Rocco**
 
-[![arXiv](http://img.shields.io/badge/arXiv-2105.07077-B31B1B.svg)]()
 
 ## Introduction
 
