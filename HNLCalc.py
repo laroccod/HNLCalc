@@ -77,9 +77,60 @@ class Utility():
                 array.append(words)
         return np.array(array)
 
+    def integrate_3body_br(self, br, mass, m0, m1, m2, coupling=1, nsample=100, integration="dq2dE"):
+
+        if m0<m1+m2+mass: return 0 
+        if integration == "dq2dE":
+            return self.integrate_3body_br_3body_dq2dE(br, coupling, m0, m1, m2, mass, nsample)
+        if integration == "dE":
+            return self.integrate_3body_br_3body_dE(br, coupling, m0, m1, m2, mass, nsample)
+
+    
+    def integrate_3body_br_3body_dq2dE(self,br, coupling, m0, m1, m2, mass, nsample):
+
+        #integration boundary
+        m3 = mass
+        q2min,q2max = (m2+m3)**2,(m0-m1)**2
+
+        #numerical integration
+        integral=0
+        for i in range(nsample):
+            # sample q2
+            q2 = random.uniform(q2min,q2max)
+            q  = math.sqrt(q2)
+            # sample energy
+            E2st = (q**2 - m2**2 + m3**2)/(2*q)
+            E3st = (m0**2 - q**2 - m1**2)/(2*q)
+            m232min = (E2st + E3st)**2 - (np.sqrt(E2st**2 - m3**2) + np.sqrt(E3st**2 - m1**2))**2
+            m232max = (E2st + E3st)**2 - (np.sqrt(E2st**2 - m3**2) - np.sqrt(E3st**2 - m1**2))**2
+            ENmax = (m232max + q**2 - m2**2 - m1**2)/(2*m0)
+            ENmin = (m232min + q**2 - m2**2 - m1**2)/(2*m0)
+            energy = random.uniform(ENmin,ENmax)
+            #branching fraction
+            integral += eval(br)*(q2max-q2min)*(ENmax-ENmin)/float(nsample)
+
+        return integral
+
+    
+    def integrate_3body_br_3body_dE(self, br, coupling, m0, m1, m2, mass, nsample):
+
+        #integration boundary
+        m3 = mass
+        emin, emax = m3, (m0**2+m3**2-(m1+m2)**2)/(2*m0)
+
+        #numerical integration
+        integral=0
+        for i in range(nsample):
+            #sample energy
+            energy = random.uniform(emin,emax)
+            #branching fraction
+            integral += eval(br) * (emax-emin)/float(nsample)
+
+        return integral 
 
 
-class HeavyNeutralLepton(Utility):
+
+class HNLCalc(Utility):
 
     ###############################
     #  Initiate
@@ -871,113 +922,6 @@ class HeavyNeutralLepton(Utility):
             prefactor=f"({tautau}*{GF}**2*coupling**2*self.masses('{pid0}')**2/(4*np.pi**3))*{self.vcoupling[str(abs(int(pid0)))]}**2"
             dbr=f"{prefactor}*(1-self.masses('{pid1}')**2/(self.masses('{pid0}')**2+mass**2-2*energy*self.masses('{pid0}')))**2*np.sqrt(energy**2-mass**2)*((self.masses('{pid0}')-energy)*(1-(mass**2+self.masses('{pid1}')**2)/self.masses('{pid0}')**2)-(1-self.masses('{pid1}')**2/(self.masses('{pid0}')**2+mass**2-2*energy*self.masses('{pid0}')))*((self.masses('{pid0}')-energy)**2/self.masses('{pid0}')+((energy**2-mass**2)/(3*self.masses('{pid0}')))))"
         return(dbr)
-    
-    #############HNL decay channel branching ratios############
-    #NOTE: the branching ratios for HNL given below are actually decay widths
-    #corresponds lepton pids to a greek index ranging from 1 to 3
-#     def analyze_pid1_pid3(self,pid1,pid3):
-#         if pid1 in ["11","-11"]:
-#             beta=1
-#         if pid1 in ["13","-13"]:
-#             beta=2
-#         if pid1 in ["15","-15"]:
-#             beta=3
-#         if pid3 in ["12","-12"]:
-#             alpha=1
-#         if pid3 in ["14","-14"]:
-#             alpha=2
-#         if pid3 in ["16","-16"]:
-#             alpha=3
-#         return(alpha,beta)
-
-#     #for N->l_beta^+ l_beta^- nu_alpha decay width
-#     def calc_br_lb_lb_nua(self,pid1,pid2,pid3):
-#         GF=1.166378*10**(-5)
-#         delta=lambda l1,l2: 1 if l1==l2 else 0
-#         xl=f"(self.masses(pid1)/mass)"
-#         xw=f"(0.231)" #xw=sin(theta_w)^2
-#         L=f"np.log((1-3*{xl}**2-(1-{xl}**2)*np.sqrt(1-4*{xl}**2))/({xl}**2*(1+np.sqrt(1-4*{xl}**2))))"
-#         C1=f"(1/4)*(1-4*{xw}+8*{xw}**2)"
-#         C2=f"(1/2)*{xw}*(2*{xw}-1)"
-#         C3=f"(1/4)*(1+4*{xw}+8*{xw}**2)"
-#         C4=f"(1/2)*{xw}*(2*{xw}+1)"
-#         alpha,beta=analyze_pid1_pid3(pid1,pid3)
-#         coupling=f"self.vcoupling[str(abs(int({pid3}))-1)]"
-#         br_lb_lb_nua=f"({GF}**2*mass**5/(192*np.pi**3))*{coupling}**2*(({C1}*(1-{delta(alpha,beta)})+{C3}*{delta(alpha,beta)})*((1-14*{xl}**2-2*{xl}**4-12*{xl}**6)*np.sqrt(1-4*{xl}**2)+12*{xl}**4*({xl}**4-1)*{L})+4*({C2}*(1-{delta(alpha,beta)})+{C4}*{delta(alpha,beta)})*({xl}**2*(2+10*{xl}**2-12*{xl}**4)*np.sqrt(1-4*{xl}**2)+6*{xl}**4*(1-2*{xl}**2+2*{xl}**4)*{L}))"
-#         return(br_lb_lb_nua)
-
-#     #for N->l_beta^+ l_beta^- nu_alpha decay width
-#     lamda=lambda a,b,c: a**2+b**2+c**2-2*a*b-2*b*c-2*c*a
-#     I1_integrand=lambda s,x,y,z: (12/s)*(s-x**2-y**2)*(1+z**2-s)*np.sqrt(lamda(s,x**2,y**2))*np.sqrt(lamda(1,s,z**2))
-#     I2_integrand=lambda s,x,y,z: (24*y*z/s)*(1+x**2-s)*np.sqrt(lamda(s,y**2,z**2))*np.sqrt(lamda(1,s,x**2))
-#     from scipy.integrate import quad
-#     def calc_br_lb_lb_nua(self,pid1,pid2,pid3):
-#         xw=f"0.231"
-#         GF=1.166378*10**(-5)
-#         delta=lambda l1,l2: 1 if l1==l2 else 0
-#         if pid2=="11":
-#             l2=1
-#         if pid2=="13":
-#             l2=2
-#         if pid2=="15":
-#             l2=3
-#         if pid3=="12":
-#             l1=1
-#         if pid3=="14":
-#             l1=2
-#         if pid3=="16":
-#             l1=3
-#         gL=f"(-(1/2)+{xw})"
-#         gR=f"{xw}"
-#         x=f"0"
-#         y=f"(self.masses({pid2})/mass)"
-#         z=y
-#         I1=f"quad(I1_integrand,({x}+{y})**2,(1-{z})**2,args=({x},{y},{z}))[0]"
-#         I2=f"quad(I2_integrand,({y}+{z})**2,(1-{x})**2,args=({x},{y},{z}))[0]"
-#         coupling=f"self.vcoupling[str(abs(int({pid3}))-1)]"
-#         br_lb_lb_nua=f"({coupling}**2*{GF}**2*mass**5/(96*np.pi**3))*(({gL}*{gR}+{delta(l1,l2)}*{gR})*{I2}+({gL}**2+{gR}**2+{delta(l1,l2)}*(1+2*{gL}))*{I1})"
-#         return(br_lb_lb_nua)
-    
-
-#     #for N->U bar{D} l_alpha^- decay width (inclusive mode)
-#     I_integrand=lambda s,x,y,z: (12/s)*(s-x**2-y**2)*(1+z**2-s)*np.sqrt(lamda(s,x**2,y**2))*np.sqrt(lamda(1,s,z**2))
-#     lamda=lambda a,b,c: a**2+b**2+c**2-2*a*b-2*b*c-2*c*a
-#     def calc_br_u_bd_l(self,pid1,pid2,pid3):
-#         GF=1.166378*10**(-5)
-#         xd=f"(self.masses({pid2})/mass)"
-#         xu=f"(self.masses({pid1})/mass)"
-#         xl=f"(self.masses({pid3})/mass)"
-#         x=xl
-#         y=xu
-#         z=xd
-#         I=f"quad(I_integrand,({x}+{y})**2,(1-{z})**2,args=({x},{y},{z}))[0]"
-#         coupling=f"self.vcoupling[str(abs(int({pid3})))]"
-#         br_u_d_l=f"(self.VHHp({pid1},{pid2})**2*{GF}**2*mass**5*coupling**2/(32*np.pi**3))*{I}"
-#         return(br_u_d_l)
-    
-#     lamda=lambda a,b,c: a**2+b**2+c**2-2*a*b-2*b*c-2*c*a
-#     x=0
-#     xq=f"(self.masses(pid1)/mass)"
-#     y=xq
-#     z=xq
-#     xw=f"(0.231)" #xw=sin(theta_w)^2
-#     I1_integrand=lambda s,x,y,z: (12/s)*(s-x**2-y**2)*(1+z**2-s)*np.sqrt(lamda(s,x**2,y**2))*np.sqrt(lamda(1,s,z**2))
-#     I2_integrand=lambda s,x,y,z: (24*y*z/s)*(1+x**2-s)*np.sqrt(lamda(s,y**2,z**2))*np.sqrt(lamda(1,s,x**2))
-#     def calc_br_q_bq_nu(self,pid1,pid3):
-#         GF=1.166378*10**(-5)
-#         if pid1 in quarks_u:
-#             gL=f"(1/2-(2/3)*{xw})"
-#             gR=f"(-(2/3)*{xw})" #article had 2 g_R^U so I assumed one was supposed to have a D
-#         if pid1 in quarks_d:
-#             gL=f"(-1/2+(1/3)*{xw})"
-#             gR=f"((1/3)*{xw})"
-#         I1=f"quad(I1_integrand,({x}+{y})**2,(1-{z})**2,args=({x},{y},{z}))[0]"
-#         I2=f"quad(I2_integrand,({y}+{z})**2,(1-{x})**2,args=({x},{y},{z}))[0]"
-#         coupling=f"self.vcoupling[str(abs(int(pid3))-1)]"
-#         br_q_bq_nu=f"(coupling**2*{GF}**2*mass**5/(32*np.pi**3))*({gL}*{gR}*{I2}+({gL}**2+{gR}**2)*{I1})"
-#         return(br_q_bq_nu)
-        
-    ################################################################################################
 
     #input path to given folder and it removes all files in that folder
     def remove_files_from_folder(self,path):
@@ -986,7 +930,7 @@ class HeavyNeutralLepton(Utility):
             os.remove(f)
 
 
-    def get_br_and_ctau(self,mpts = np.logspace(-3,1, 401)):
+    def get_br_and_ctau(self,mpts = np.logspace(-3,1, 401),coupling =1):
         """
         
         Generate Decay Data and save to Decay Data directory
@@ -1000,7 +944,7 @@ class HeavyNeutralLepton(Utility):
 #         Decay = HNL_Decay(couplings = coupling)
         
         #Generate ctau (stored in Decay.ctau)
-        self.gen_ctau(mpts)
+        self.gen_ctau(mpts,coupling)
         
         #Generate branching ratios (stored in Decay.model_brs)
         self.gen_brs()
@@ -1313,6 +1257,101 @@ class HeavyNeutralLepton(Utility):
         
         self.alph_s = interpolate.interp1d( alph_data['m'], alph_data['alph'],bounds_error = False,fill_value = 0) 
 
+        self.plot_labels = {
+        #Leptons
+        'e': r'$e$',
+        anti('e'): r'$e$',
+        'mu': r'$\mu$',
+        anti('mu'): r'$\mu$',       
+        'tau': r'$\tau$',
+        anti('tau'): r'$\tau$',
+        'nu':r'$\nu$',
+        #Pseudos
+        'pi+':r'$\pi^+$',
+        anti('pi+'):r'$\pi^-$',
+        'pi0':r'$\pi^0$',
+        'K+': r'$K^+$',
+        anti('K+'): r'$K^-$',
+        'D+': r'$D^+$',
+        anti('D+'): r'$D^-$',
+        'Ds+': r'$D_s^+$',
+        anti('Ds+'): r'$D_s^-$',
+        'eta': r'$\eta$',
+        'etap': r'$\eta\prime$',
+        #Vectors
+        'rho+':r'$\rho^+$',
+        anti('rho+'):r'$\rho^-$',
+        'rho0':r'$\rho^0$',
+        'K+*':r'$K^{*+}$',
+        anti('K+*'):r'$K^{*-}$',
+        'omega':r'$\omega$',
+        'phi':r'$\phi$',
+        '3had': r'$(\geq3H)$',
+        #Quarks
+        'd': r'$d$',
+        anti('d'): r'$\overline{d}$',
+        'u': r'$u$',
+        anti('u'): r'$\overline{u}$',
+        'c': r'$c$',
+        anti('c'): r'$\overline{c}$',
+        's': r'$s$',
+        anti('s'): r'$\overline{s}$',
+        't': r'$t$',
+        anti('t'): r'$\overline{t}$',
+        'b': r'$b$',
+        anti('b'): r'$\overline{b}$',
+        }
+
+        
+        self.plot_labels_neut = {
+        #Leptons
+        'e': r'$e$',
+        anti('e'): r'$e$',
+        'mu': r'$\mu$',
+        anti('mu'): r'$\mu$',
+        'tau': r'$\tau$',
+        anti('tau'): r'$\tau$',
+        've': r'$\nu_e$',
+        anti('ve'): r'$\overline{\nu}_e$',
+        'vmu': r'$\nu_\mu$',
+        anti('vmu'): r'$\overline{\nu}_\mu$',
+        'vtau': r'$\nu_\tau$',
+        anti('vtau'): r'$\overline{\nu}_\tau$',
+        'nu':r'$\nu$',
+        'pi+':r'$\pi$',
+        anti('pi+'):r'$\pi$',
+        'pi0':r'$\pi^0$',
+        'K+': r'$K$',
+        anti('K+'): r'$K$',
+        'eta': r'$\eta$',
+        'etap': r'$\eta\prime$',
+        'D+': r'$D$',
+        anti('D+'): r'$D$',
+        'Ds+': r'$D_s$',
+        anti('Ds+'): r'$D_s$',
+        'rho+':r'$\rho$',
+        anti('rho+'):r'$\rho$',
+        'rho0':r'$\rho^0$',
+        'K+star':r'$K^{*}$',
+        anti('K+star'):r'$K^{*}$',
+        'omega':r'$\omega$',
+        'phi': r'$\phi$',
+        '3had': r'$(\geq3H)$',
+        'd': r'$d$',
+        anti('d'): r'$\overline{d}$',
+        'u': r'$u$',
+        anti('u'): r'$\overline{u}$',
+        'c': r'$c$',
+        anti('c'): r'$\overline{c}$',
+        's': r'$s$',
+        anti('s'): r'$\overline{s}$',
+        't': r'$t$',
+        anti('t'): r'$\overline{t}$',
+        'b': r'$b$',
+        anti('b'): r'$\overline{b}$',
+            
+        }
+
         
         
         #define particle content
@@ -1421,20 +1460,20 @@ class HeavyNeutralLepton(Utility):
         
         for l in leptons: 
 
-            mode = (l,'had')
+            mode = (l,'3had')
 
-            conj_mode = (anti(l),'had')
+            conj_mode = (anti(l),'3had')
 
             lhad.append(mode)
 
             lhad.append(conj_mode)
 
-        nuhad = [('nu','had')]
+        nuhad = [('nu','3had')]
                 
 
         self.modes = {'null':null,'llnu':llnu,'nu3':nu3,'nuP':nuP,'lP':lP,'nuV':nuV, 'lV':lV,'lhad':lhad,'nuhad':nuhad,'lud':lud,'nuqq':nuqq}
         
-        
+        self.decay_modes = [] 
         
         self.modes_inactive = {}
         self.modes_active = {}
@@ -1448,14 +1487,20 @@ class HeavyNeutralLepton(Utility):
             for mode in self.modes[channel]:
             
             
-                if channel in ['null','nuhad','nuV','nuP','nu3','nuqq']: modes_active.append(mode)
+                if channel in ['null','nuhad','nuV','nuP','nu3','nuqq']: 
+                    if channel != 'nuqq': self.decay_modes.append(mode)
+                    modes_active.append(mode)
                 
                 elif channel in ['lV','lP','lhad','lud']: 
-                    if self.U[mode[0]] != 0: modes_active.append(mode)
+                    if self.U[mode[0]] != 0: 
+                        modes_active.append(mode)
+                        if channel != 'lud': self.decay_modes.append(mode)
                     else: modes_inactive.append(mode)
                 
                 elif channel in ['llnu']:
-                    if self.U[mode[0]] != 0 or self.U[mode[1]] != 0: modes_active.append(mode)
+                    if self.U[mode[0]] != 0 or self.U[mode[1]] != 0: 
+                        modes_active.append(mode)
+                        self.decay_modes.append(mode)
                     else: modes_inactive.append(mode)
                         
                      
@@ -1467,7 +1512,8 @@ class HeavyNeutralLepton(Utility):
             self.modes_inactive[channel] = modes_inactive
             
             self.modes_active[channel] = modes_active
-    
+        
+        
     def gen_widths(self,mpts):
         
         """
@@ -1488,7 +1534,6 @@ class HeavyNeutralLepton(Utility):
         #iterate through each decay channel
         for channel in channels:
             
-            channel_widths = {}
 
             if channel not in ['nuhad','lhad']:
             
@@ -1500,12 +1545,11 @@ class HeavyNeutralLepton(Utility):
                     
                     gamma_pts = [Gamma[channel](m,mode) for m in self.mpts]
        
-                    channel_widths[mode] = gamma_pts
+                    self.model_widths[mode] = gamma_pts
             
             
-                self.model_widths[channel] = channel_widths
 
-        channel_widths = {}
+        
         
         for mode in self.modes_active['lhad']:
 
@@ -1513,26 +1557,26 @@ class HeavyNeutralLepton(Utility):
             
             for quark_mode in self.modes_active['lud']: 
                 
-                if quark_mode[0] == mode[0]: gamma_quark += np.array(self.model_widths['lud'][quark_mode])
+                if quark_mode[0] == mode[0]: gamma_quark += np.array(self.model_widths[quark_mode])
 
             gamma_had = np.zeros(len(self.mpts))
 
             for had_mode in self.modes_active['lP']: 
 
-                if had_mode[0] == mode[0]: gamma_had += np.array(self.model_widths['lP'][had_mode])
+                if had_mode[0] == mode[0]: gamma_had += np.array(self.model_widths[had_mode])
             
             for had_mode in self.modes_active['lV'] : 
 
-                if had_mode[0] == mode[0] : gamma_had += np.array(self.model_widths['lV'][had_mode])
+                if had_mode[0] == mode[0] : gamma_had += np.array(self.model_widths[had_mode])
 
             gamma = gamma_quark - gamma_had
 
             gamma[gamma < 0] = 0
             
-            channel_widths[mode] = list(gamma)
+            self.model_widths[mode] = list(gamma)
             
 
-        self.model_widths['lhad'] = channel_widths
+        
             
         
         
@@ -1545,27 +1589,27 @@ class HeavyNeutralLepton(Utility):
 
             for quark_mode in self.modes_active['nuqq']: 
                 
-                if quark_mode[0] == mode[0]: gamma_quark += np.array(self.model_widths['nuqq'][quark_mode])
+                if quark_mode[0] == mode[0]: gamma_quark += np.array(self.model_widths[quark_mode])
             
             for had_mode in self.modes_active['nuP']: 
 
-                if had_mode[0] == mode[0]: gamma_had += np.array(self.model_widths['nuP'][had_mode])
+                if had_mode[0] == mode[0]: gamma_had += np.array(self.model_widths[had_mode])
             
             for had_mode in self.modes_active['nuV']: 
 
-                if had_mode[0] == mode[0] : gamma_had += np.array(self.model_widths['nuV'][had_mode])
+                if had_mode[0] == mode[0] : gamma_had += np.array(self.model_widths[had_mode])
 
             
             gamma = gamma_quark - gamma_had
 
             gamma[gamma < 0] = 0
             
-            channel_widths[mode] = list(gamma)
+            self.model_widths[mode] = list(gamma)
             
         
-        self.model_widths['nuhad'] = channel_widths
+       
         
-    def gen_ctau(self,mpts):
+    def gen_ctau(self,mpts,coupling =1):
 
             """
 
@@ -1597,7 +1641,7 @@ class HeavyNeutralLepton(Utility):
                         for mode in self.modes_active[channel]:
     
     
-                            gamma = self.model_widths[channel][mode][i]
+                            gamma = self.model_widths[mode][i]
     
     
     
@@ -1608,14 +1652,14 @@ class HeavyNeutralLepton(Utility):
                         
                         for mode in self.modes_active[channel]:
     
-                            gamma = self.model_widths[channel][mode][i]
+                            gamma = self.model_widths[mode][i]
 
                             gamma_T += gamma
 
 
                 total_width.append(gamma_T)
             
-            ctau = [float((Decimal(self.c)/Decimal(g)))*self.GeVtoS for g in total_width]
+            ctau = [float((Decimal(self.c)/Decimal(g)))*self.GeVtoS/coupling**2 for g in total_width]
 
             self.total_width = total_width
 
@@ -1630,37 +1674,34 @@ class HeavyNeutralLepton(Utility):
 
             """
 
-            channels = self.model_widths.keys()
+            
 
 
             self.model_brs = {}
 
             #iterate over decay channels
-            for channel in channels:
+        
+            #sum over branching ratios
+            for mode in self.model_widths.keys():
 
-                channel_brs = {}
-
-                #sum over branching ratios
-                for mode in self.model_widths[channel]:
-
-                    mode_br = []
+                mode_br = []
 
 
-                    for i in range(len(self.model_widths[channel][mode])):
+                for i in range(len(self.model_widths[mode])):
 
-                        gamma_partial = self.model_widths[channel][mode][i]
+                    gamma_partial = self.model_widths[mode][i]
 
-                        gamma_total = self.total_width[i]
+                    gamma_total = self.total_width[i]
 
 
 
-                        mode_br.append( gamma_partial/gamma_total)
+                    mode_br.append( gamma_partial/gamma_total)
 
 
-                    channel_brs[mode] = mode_br
+                
 
 
-                self.model_brs[channel] = channel_brs
+                self.model_brs[mode] = mode_br
                 
     def save_data(self,save_ctau,save_brs):
         
@@ -1698,7 +1739,7 @@ class HeavyNeutralLepton(Utility):
                 
                 
 
-                channel_path_br = f"model/br/{channel}"
+                channel_path_br = f"model/br/"
 
                 os.makedirs(channel_path_br,exist_ok = True)
                 try:
@@ -1710,26 +1751,23 @@ class HeavyNeutralLepton(Utility):
                     pass
            
              
-            #save branching ratios
-            for channel in self.model_brs.keys():
-
-                channel_path_br = f"model/br/{channel}"
+           
                 
-                for mode in self.model_brs[channel]:
-                    
-                    br_pts = self.model_brs[channel][mode]
-                    
-                    df_data = {'m': self.mpts,'br':br_pts}
+            for mode in self.model_brs.keys():
+                
+                br_pts = self.model_brs[mode]
+                
+                df_data = {'m': self.mpts,'br':br_pts}
 
 
-                    df=pd.DataFrame(df_data)
-                    
-                   
-                    
-                    
-                    save_path = f"{channel_path_br}/{mode}.csv"
+                df=pd.DataFrame(df_data)
+                
+               
+                
+                
+                save_path = f"model/br/{mode}.csv"
 
-                    df.to_csv(save_path,sep=' ',header=False,index=False)
+                df.to_csv(save_path,sep=' ',header=False,index=False)
 
   
 
@@ -2075,147 +2113,8 @@ def anti(x):
         
     elif 'anti_' in x:  return x.replace('anti_','')
     
-plot_labels = {
-        #Leptons
-        'e': r'$e$',
-        anti('e'): r'$e$',
-    
-        'mu': r'$\mu$',
-        anti('mu'): r'$\mu$',
-        
-        'tau': r'$\tau$',
-        anti('tau'): r'$\tau$',
-        
-        've': r'$\nu_e$',
-        anti('ve'): r'$\overline{\nu}_e$',
-    
-        'vmu': r'$\nu_\mu$',
-        anti('vmu'): r'$\overline{\nu}_\mu$',
-        
-        'vtau': r'$\nu_\tau$',
-        anti('vtau'): r'$\overline{\nu}_\tau$',
-        'nu':r'$\nu$',
-    
-        #Pseudos
-        'pi+':r'$\pi^+$',
-        anti('pi+'):r'$\pi^-$',
-    
-        'pi0':r'$\pi^0$',
-    
-        'K+': r'$K^+$',
-        anti('K+'): r'$K^-$',
-    
-        'eta': r'$\eta$',
-    
-        #Vectors
-        'rho+':r'$\rho^+$',
-        anti('rho+'):r'$\rho^-$',
-    
-        'rho0':r'$\rho^0$',
-    
-        'K+*':r'$K^{*+}$',
-        anti('K+*'):r'$K^{*-}$',
-    
-        'omega':r'$\omega$',
-        
-        #Quarks
-        'd': r'$d$',
-        anti('d'): r'$\overline{d}$',
-        
-        'u': r'$u$',
-        anti('u'): r'$\overline{u}$',
-        
-        'c': r'$c$',
-        anti('c'): r'$\overline{c}$',
-    
-        's': r'$s$',
-        anti('s'): r'$\overline{s}$',
-    
-        't': r'$t$',
-        anti('t'): r'$\overline{t}$',
-    
-        'b': r'$b$',
-        anti('b'): r'$\overline{b}$',
-        
-            
-        }
 
-plot_labels_neut = {
-        #Leptons
-        'e': r'$e$',
-        anti('e'): r'$e$',
-    
-        'mu': r'$\mu$',
-        anti('mu'): r'$\mu$',
-        
-        'tau': r'$\tau$',
-        anti('tau'): r'$\tau$',
-        
-        've': r'$\nu_e$',
-        anti('ve'): r'$\overline{\nu}_e$',
-    
-        'vmu': r'$\nu_\mu$',
-        anti('vmu'): r'$\overline{\nu}_\mu$',
-        
-        'vtau': r'$\nu_\tau$',
-        anti('vtau'): r'$\overline{\nu}_\tau$',
-        'nu':r'$\nu$',
-    
-        #Pseudos
-        'pi+':r'$\pi$',
-        anti('pi+'):r'$\pi$',
-    
-        'pi0':r'$\pi^0$',
-    
-        'K+': r'$K$',
-        anti('K+'): r'$K$',
-    
-        'eta': r'$\eta$',
 
-        'etap': r'$\eta\prime$',
-
-        'D+': r'$D$',
-        anti('D+'): r'$D$',
-
-        'Ds+': r'$D_s$',
-        anti('Ds+'): r'$D_s$',
-    
-        #Vectors
-        'rho+':r'$\rho$',
-        anti('rho+'):r'$\rho$',
-    
-        'rho0':r'$\rho^0$',
-    
-        'K+star':r'$K^{*}$',
-        anti('K+*'):r'$K^{*}$',
-    
-        'omega':r'$\omega$',
-
-        'phi': r'$\phi$',
-
-        #hadrons
-        'had': r'$(\geq3H)$',
-        #Quarks
-        'd': r'$d$',
-        anti('d'): r'$\overline{d}$',
-        
-        'u': r'$u$',
-        anti('u'): r'$\overline{u}$',
-        
-        'c': r'$c$',
-        anti('c'): r'$\overline{c}$',
-    
-        's': r'$s$',
-        anti('s'): r'$\overline{s}$',
-    
-        't': r'$t$',
-        anti('t'): r'$\overline{t}$',
-    
-        'b': r'$b$',
-        anti('b'): r'$\overline{b}$',
-        
-            
-        }
 
 
 pid_conversions = {    
