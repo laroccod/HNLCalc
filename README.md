@@ -10,7 +10,7 @@ We present the package, **HNLCalc**, a fast and flexible tool which can be used 
 ### Paper
 
 Our primary publication [Simulating Heavy Neutral Leptons with General Couplings at Collider and Fixed
-Target Experiments]() provides an overview of the production and decay channels that are implemented in the package. Additionally, it showcases an example of how HNLCalc can be used, where we have used HNLCalc to extend the **FORESEE** (FORward Experiment SEnsitivity Estimator) package to study HNL phenomenology and sensitivity for forward physics experiments. 
+Target Experiments](https://arxiv.org/abs/2405.07330) provides an overview of the production and decay channels that are implemented in the package. Additionally, it showcases an example of how HNLCalc can be used, where we have used HNLCalc to extend the **FORESEE** (FORward Experiment SEnsitivity Estimator) package to study HNL phenomenology and sensitivity for forward physics experiments. 
 
 ### Tutorial
 
