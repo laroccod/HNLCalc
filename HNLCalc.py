@@ -155,24 +155,21 @@ class HNLCalc(Utility):
     def fH(self,pid):
         if   pid in ["211","-211","111"]: return 0.1303
         elif pid in ["221","-221"]: return 0.0784   
-        #elif pid in ["213","-213"]: return 0.210
         elif pid in ["213","-213"]: return 0.220  
-        #https://iopscience.iop.org/article/10.1088/1674-1137/42/7/073102/pdf
-        elif pid in ["113"]       : return 0.220       #https://arxiv.org/pdf/1005.1607.pdf
-        #elif pid in ["113"]       : return 0.166
-        elif pid in ["223","-223"]: return 0.195    #https://arxiv.org/pdf/1005.1607.pdf
-        elif pid in ["333"]: return 0.229               #for phi meson found here https://iopscience.iop.org/article/10.1088/1674-1137/abcd8f/pdf
+        elif pid in ["113"]       : return 0.220       
+        elif pid in ["223","-223"]: return 0.195    
+        elif pid in ["333"]: return 0.229               
         elif pid in ["313","-313","323","-323"]: return 0.204 
         elif pid in ["311","-311","321","-321"]: return 0.1564 
         elif pid in ["331","-331"]: return -0.0957
         elif pid in ["421","-421","411","-411"]: return 0.2226 
-        elif pid in ["443"]: return 0.409         #J/psifound fromhttps://arxiv.org/pdf/hep-ph/9703252.pdf
+        elif pid in ["443"]: return 0.409         
         elif pid in ["431","-431"]: return 0.2801
         elif pid in ["511", "511","521","-521"]: return 0.190
         elif pid in ["513","-513"]: return 1.027*0.190
         elif pid in ["531","-531"]: return 0.230  
         elif pid in ["523","-523"]: return 1.027*0.190
-        elif pid in ["533","-533"]: return 1.028*0.230        #obtained from https://iopscience.iop.org/article/10.1088/1674-1137/42/7/073102/pdf (same with all vector mesons)
+        elif pid in ["533","-533"]: return 1.028*0.230        
         elif pid in ["541","-541"]: return 0.480
         elif pid in ["413","-413","423","-423"]: return 1.097*0.2226 
         elif pid in ["433","-433"]: return 1.093*0.2801
@@ -183,7 +180,6 @@ class HNLCalc(Utility):
         elif pid in ["15","-15"    ]: return 290.3*1e-15
         elif pid in ["2212","-2212"]: return 10**8
         elif pid in ["211","-211"  ]: return 2.603*10**-8
-        #elif pid in ["223"         ]: return 7.58*10**-23 #obtained this lifetime from wiki, couldnt find on pdg
         elif pid in ["323","-323"  ]: return 1.425*10**-23 
         elif pid in ["321","-321"  ]: return 1.2380*10**-8
         elif pid in ["411","-411"  ]: return 1040*10**-15
@@ -299,23 +295,19 @@ class HNLCalc(Utility):
     # Branching fraction
     #pid0 is parent meson, pid1 is daughter meson
     def get_2body_br(self,pid0,pid1):
-
         #read constant
         mH, mLep, tauH = self.masses(pid0), self.masses(pid1), self.tau(pid0)
         vH, fH = self.VH(pid0), self.fH(pid0)
         SecToGev=1./(6.582122*pow(10.,-25.))
         tauH=tauH*SecToGev
         GF=1.166378*10**(-5) #GeV^(-2)
-
         #calculate br
         prefactor=(tauH*GF**2*fH**2*vH**2)/(8*np.pi)
         prefactor*=self.vcoupling[str(abs(int(pid1)))]**2
         br=str(prefactor)+"*coupling**2*mass**2*"+str(mH)+"*(1.-(mass/"+str(mH)+")**2 + 2.*("+str(mLep)+"/"+str(mH)+")**2 + ("+str(mLep)+"/mass)**2*(1.-("+str(mLep)+"/"+str(mH)+")**2)) * np.sqrt((1.+(mass/"+str(mH)+")**2 - ("+str(mLep)+"/"+str(mH)+")**2)**2-4.*(mass/"+str(mH)+")**2)"
         return br
 
-    #pid0 is tau lepton, pid1 is produced meson, pid2 is HNL
     def get_2body_br_tau(self,pid0,pid1):
-        #for daugter vector meson rho added K^*; not sure if this is accurate
         if pid1 in ['213','-213','323','-323']:
             if pid1 in ['213','-213']: grho = 0.102
             if pid1 in ['323', '-323']: grho = 0.217*self.masses(pid1)
@@ -326,7 +318,7 @@ class HNLCalc(Utility):
             GF=1.166378*10**(-5) #GeV^(-2)
             prefactor=(tautau*grho**2*GF**2*VH**2*Mtau**3/(8*np.pi*Mrho**2))
             prefactor*=(self.vcoupling[str(abs(int(pid0)))]**2)
-            br=f"{prefactor}*coupling**2*((1-(mass**2/self.masses('{pid0}')**2))**2+(self.masses('{pid1}')**2/self.masses('{pid0}')**2)*(1+((mass**2-2*self.masses('{pid1}')**2)/self.masses('{pid0}')**2)))*np.sqrt((1-((self.masses('{pid1}')-mass)**2/self.masses('{pid0}')**2))*(1-((self.masses('{pid1}')+mass)**2/self.masses('{pid0}')**2)))"
+            br=f"{prefactor}*coupling**2*((1-(mass**2/{Mtau}**2))**2+({Mrho}**2/{Mtau}**2)*(1+((mass**2-2*{Mrho}**2)/{Mtau}**2)))*np.sqrt((1-(({Mrho}-mass)**2/{Mtau}**2))*(1-(({Mrho}+mass)**2/{Mtau}**2)))"
         #for daughter pseudoscalars
         else:
             SecToGev=1./(6.582122*pow(10.,-25.))
@@ -336,9 +328,10 @@ class HNLCalc(Utility):
             VH=self.VH(pid1)
             fH=self.fH(pid1)
             Mtau=self.masses(pid0)
+            M1=self.masses(pid1)
             prefactor=(tautau*GF**2*VH**2*fH**2*Mtau**3/(16*np.pi))
             prefactor*=(self.vcoupling[str(abs(int(pid0)))]**2)
-            br=f"{prefactor}*coupling**2*((1-(mass**2/self.masses('{pid0}')**2))**2-(self.masses('{pid1}')**2/self.masses('{pid0}')**2)*(1+(mass**2/self.masses('{pid0}')**2)))*np.sqrt((1-((self.masses('{pid1}')-mass)**2/self.masses('{pid0}')**2)*(1-((self.masses('{pid1}')+mass)**2/self.masses('{pid0}')**2))))"
+            br=f"{prefactor}*coupling**2*((1-(mass**2/{Mtau}**2))**2-({M1}**2/{Mtau}**2)*(1+(mass**2/{Mtau}**2)))*np.sqrt((1-(({M1}-mass)**2/{Mtau}**2)*(1-(({M1}+mass)**2/{Mtau}**2))))"
         return (br)
 
     ###############################
@@ -392,11 +385,11 @@ class HNLCalc(Utility):
         elif pid0 in ['321','-321'] and pid1 in ['111','-111']: return V23
         elif pid0 in ['431','-431'] and pid1 in ['221','-221']: return V43
         elif pid0 in ['431','-431'] and pid1 in ['331','-331']: return V43
-        elif pid0 in ['521','-521'] and pid1 in ['111','-111',"221","-221","331","-331"]: return V25 #not sure if its accurate for 221 and 331
+        elif pid0 in ['521','-521'] and pid1 in ['111','-111',"221","-221","331","-331"]: return V25 
         elif pid0 in ['541','-541'] and pid1 in ['421','-421']: return V25
         elif pid0 in ['541','-541'] and pid1 in ['441','-441']: return V45
         elif pid0 in ['421','-421'] and pid1 in ['211','-211']: return V41
-        elif pid0 in ['411','-411'] and pid1 in ['111','-111',"221","-221","331","-331"]: return V41 #not sure if its accurate for 221 and 331
+        elif pid0 in ['411','-411'] and pid1 in ['111','-111',"221","-221","331","-331"]: return V41 
         elif pid0 in ['431','-431'] and pid1 in ['311','-311']: return V41
         elif pid0 in ['511','-511'] and pid1 in ['211','-211']: return V25
         elif pid0 in ['531','-531'] and pid1 in ['321','-321']: return V25
@@ -434,134 +427,98 @@ class HNLCalc(Utility):
         #form factor parameters
         #D+ -> K0
         if pid0 in ["411","-411"] and pid1 in ["311","-311"]:
-            #pidS, pidV = "431", "433"
-            #f00, MV, MS = .747, 2.01027, 2.318      #f00 obtained from https://arxiv.org/pdf/1511.04877.pdf
             pidV, pidS = "433", "431"
-            f00, MV, MS = .747, self.masses(pidV), self.masses(pidS)      #f00 obtained from https://arxiv.org/pdf/1511.04877.pdf
+            f00, MV, MS = .747, self.masses(pidV), self.masses(pidS)      
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
             f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
         #D0 -> K+
         if pid0 in ["421","-421"] and pid1 in ["321","-321"]:
-            #f00, MV, MS = .747, 2.01027, 2.318      #f00 obtained from https://arxiv.org/pdf/1511.04877.pdf
             pidV, pidS = "433", "431"
-            f00, MV, MS = .747, self.masses(pidV), self.masses(pidS)      #f00 obtained from https://arxiv.org/pdf/1511.04877.pdf
+            f00, MV, MS = .747, self.masses(pidV), self.masses(pidS)      
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
             f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
         #Ds+ -> K0
         if pid0 in ["431","-431"] and pid1 in ["311","-311"]:
-            #f00, MV, MS = .747, 2.01027, 2.318      #f00 obtained from https://arxiv.org/pdf/1511.04877.pdf
             pidV, pidS = "413", "411"
-            f00, MV, MS = .747, self.masses(pidV), self.masses(pidS)      #f00 obtained from https://arxiv.org/pdf/1511.04877.pdf
+            f00, MV, MS = .747, self.masses(pidV), self.masses(pidS)     
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
             f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
         #B0 -> D+
         if pid0 in ["511","-511"] and pid1 in ["411","-411"]:
-            #f00, MV, MS = 0.66, 6.400, 6.2749       #f00 obtained from https://arxiv.org/pdf/1505.03925v2.pdf
             pidV, pidS = "543", "541"
-            f00, MV, MS = 0.66, self.mass_543, self.masses(pidS)       #f00 obtained from https://arxiv.org/pdf/1505.03925v2.pdf
+            f00, MV, MS = 0.66, self.mass_543, self.masses(pidS)      
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
             f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
         #B+ -> D0
         if pid0 in ["521","-521"] and pid1 in ["421", "-421"]:
-            #f00, MV, MS = 0.66, 6.400, 6.2749       #f00 obtained from https://arxiv.org/pdf/1505.03925v2.pdf
             pidV, pidS = "543", "541"
-            f00, MV, MS = 0.66, self.mass_543, self.masses(pidS)       #f00 obtained from https://arxiv.org/pdf/1505.03925v2.pdf
+            f00, MV, MS = 0.66, self.mass_543, self.masses(pidS)       
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
             f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
         #B0s -> Ds-
         if pid0 in ["531","-531"] and pid1 in ["431","-431"]:
-            #pidV = "533"
-            #f00, MV, MS = -0.65, self.masses(pidV), self.masses(pid0)          #f00 obtained from https://arxiv.org/pdf/1106.3003.pdf
             pidV, pidS = "543", "541"
-            f00, MV, MS = -0.65, self.mass_543, self.masses(pidS)          #f00 obtained from https://arxiv.org/pdf/1106.3003.pdf
+            f00, MV, MS = -0.65, self.mass_543, self.masses(pidS)          
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
             f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)" 
         #Bc+ -> B0
         if pid0 in ["541","-541"] and pid1 in ["511","-511"]:
-            #f00, MV, MS = -0.58, 6.400, 6.2749      #f00 obtained from https://arxiv.org/pdf/hep-ph/0007169.pdf
             pidV, pidS = "413", "411"
-            f00, MV, MS = -0.58, self.masses(pidV), self.masses(pidS)      #f00 obtained from https://arxiv.org/pdf/hep-ph/0007169.pdf
+            f00, MV, MS = -0.58, self.masses(pidV), self.masses(pidS)     
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
             f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
         #Bc+ -> B0s
         if pid0 in ["541","-541"] and pid1 in ["531","-531"]:
-            #f00, MV, MS = -0.61, 6.400, 6.2749      #f00 obtained from https://arxiv.org/pdf/hep-ph/0007169.pdf
             pidV, pidS = "433", "431"
-            f00, MV, MS = -0.61, self.masses(pidV), self.masses(pidS)      #f00 obtained from https://arxiv.org/pdf/hep-ph/0007169.pdf
+            f00, MV, MS = -0.61, self.masses(pidV), self.masses(pidS)      
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
             f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
         #Bc+ -> D0
         if pid0 in ["541","-541"] and pid1 in ["421","-421"]:
-            #f00, MV, MS = 0.69, 6.400, 6.2749      #f00 obtained from https://arxiv.org/pdf/hep-ph/0007169.pdf
             pidV, pidS = "523", "521"
-            f00, MV, MS = 0.69, self.masses(pidV), self.masses(pidS)      #f00 obtained from https://arxiv.org/pdf/hep-ph/0007169.pdf
+            f00, MV, MS = 0.69, self.masses(pidV), self.masses(pidS)     
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
             f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
         #K0L,K0s -> pi+
         if pid0 in ["130","310"] and pid1 in ["211","-211"]:
             cp=(1/2)
-            f00, MV, MS = .9636, .878, 1.252        #f00 obtained from https://journals.aps.org/prd/pdf/10.1103/PhysRevD.96.034501; pole masses are found on lbl for K_L
-            #pidV, pidS = ""
-            #f00, MV, MS = .9636, self.masses(pidV), self.masses(pidS)        #f00 obtained from https://journals.aps.org/prd/pdf/10.1103/PhysRevD.96.034501; pole masses are found on lbl for K_L
+            f00, MV, MS = .9636, .878, 1.252        
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
             f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
-        
-        #new modes
         #K+ to pi0; assuming same form factors as pi+
         if pid0 in ["321","-321"] and pid1 in ["111","-111"]:
             cp=(1/2)
-            #pidV = "323"
-            #f00, MV, MS = 0.970, self.masses(pidV), self.masses(pid0)
             pidV, pidS = "313", "311"
             f00, MV, MS = 0.970, self.masses(pidV), self.masses(pidS)
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
             f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
-
-        #this is neutral kaon
-        #K0 to pi+; replaced by KL and KS
-        #if pid0 in ["311","-311"] and pid1 in ["211","-211"]:
-        #    f00, lambdap, lambda0, mpi = 0.970, 0.0267, 0.0117, self.masses(pid1)
-        #    fp = str(f00) + "*(1+" + str(lambdap) + "*q**2/" + str(mpi) + "**2)"
-        #    f0 = str(f00) + "*(1+" + str(lambda0) + "*q**2/" + str(mpi) + "**2)"
-
         #D^+_s \to \eta; assuming same form factors as pi+
         if pid0 in ["431","-431"] and pid1 in ["221","-221"]:
-            #pidV = "433"
-            #f00, MV, MS = 0.495, self.masses(pidV), self.masses(pid0)
             pidV, pidS = "433", "431"
             f00, MV, MS = 0.495, self.masses(pidV), self.masses(pidS)
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
             f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
         #D^+_s \to \eta'; assuming same form factors as pi+
         if pid0 in ["431","-431"] and pid1 in ["331","-331"]:
-            #pidV = "433"
-            #f00, MV, MS = 0.557, self.masses(pidV), self.masses(pid0)
             pidV, pidS = "433", "431"
             f00, MV, MS = 0.557, self.masses(pidV), self.masses(pidS)
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
             f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
-
         #B^+ \to \pi^0; assuming same form factors as pi+
         if pid0 in [ "521","-521"] and pid1 in ["111","-111"]:
             cp=1/2
-            #pidV ="523"
-            #f00, MV, MS = 0.29, self.masses(pidV), self.masses(pid0)
             pidV, pidS = "513","511"
             f00, MV, MS = 0.29, self.masses(pidV), self.masses(pidS)
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
             f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
         #B_c^+ \to \eta_c
         if pid0 in ["541","-541"] and pid1 in ["441","-441"]:
-            #pidV = "543"
-            #f00, MV, MS = 0.76, self.masses(pidV), self.masses(pid0)
             pidV, pidS = "543","541"
             f00, MV, MS = 0.76, self.mass_543, self.masses(pidS)
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
             f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
         #D^0 \to \pi^+
         if pid0 in ["421","-421"] and pid1 in ["211","-211"]:
-            #pidV = "423"
-            #f00, MV, MS = 0.69, self.masses(pidV), self.masses(pid0)
             pidV, pidS = "413", "411"
             f00, MV, MS = 0.69, self.masses(pidV), self.masses(pidS)
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
@@ -569,8 +526,6 @@ class HNLCalc(Utility):
         #D^- \to \pi^0 
         if pid0 in ["411","-411"] and pid1 in ["111","-111"]: 
             cp=(1/2)
-            #pidV = "423"
-            #f00, MV, MS = 0.69, self.masses(pidV), self.masses(pid0)
             pidV, pidS = "413", "411"
             f00, MV, MS = 0.69, self.masses(pidV), self.masses(pidS)
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
@@ -584,24 +539,18 @@ class HNLCalc(Utility):
             #etap
             if pid1 in ["331","-331"]:
                 cp = ((np.sin(theta)/np.sqrt(6)) + (np.cos(theta)/np.sqrt(3)))**2
-            #pidV = "423"
-            #f00, MV, MS = 0.69, self.masses(pidV), self.masses(pid0)
             pidV, pidS = "413", "411"
             f00, MV, MS = 0.69, self.masses(pidV), self.masses(pidS)
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
             f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
         #D_s^+ \to K^0
         if pid0 in ["431","-431"] and pid1 in ["311","-311"]:
-            #pidV = "433"
-            #f00, MV, MS = 0.72, self.masses(pidV), self.masses(pid0)
             pidV, pidS = "413", "411"
             f00, MV, MS = 0.72, self.masses(pidV), self.masses(pidS)
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
             f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
         #B^0 \to \pi^+
         if pid0 in ["511","-511"] and pid1 in ["211","-211"]:
-            #pidV = "513"
-            #f00, MV, MS = 0.29, self.masses(pidV), self.masses(pid0)
             pidV, pidS = "523", "521"
             f00, MV, MS = 0.29, self.masses(pidV), self.masses(pidS)
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
@@ -615,16 +564,12 @@ class HNLCalc(Utility):
             #etap
             if pid1 in ["331","-331"]:
                 cp = ((np.sin(theta)/np.sqrt(6)) + (np.cos(theta)/np.sqrt(3)))**2
-            #pidV ="523"
-            #f00, MV, MS = 0.29, self.masses(pidV), self.masses(pid0)
             pidV, pidS = "523", "521"
             f00, MV, MS = 0.29, self.masses(pidV), self.masses(pidS)
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
             f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
         #B_s^0 \to K^+
         if pid0 in ["531","-531"] and pid1 in ["321","-321"]:
-            #pidV = "533"
-            #f00, MV, MS = 0.31, self.masses(pidV), self.masses(pid0)
             pidV, pidS = "523", "521"
             f00, MV, MS = 0.31, self.masses(pidV), self.masses(pidS)
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
@@ -650,15 +595,17 @@ class HNLCalc(Utility):
         tauH=tauH*SecToGev
         GF=1.1663787*10**(-5)
         VHV=self.VHHp(pid0,pid1)
+        m0=self.masses(pid0)
+        m1=self.masses(pid1)
+        m2=self.masses(pid2)
         #accounts for quark content of decay; only relevant for neutral mesons with several quark configurations
         cv=1
         #'D^0 -> K*^- + e^+ + N' form factors
         if pid0 in ['-421','421'] and pid1 in ['323','-323']:
-            #Mp=1.969; MV=2.11
             pidp = "431"
             pidV ="433"
             Mp = self.masses(pidp); MV = self.masses(pidV)
-            A00=.76; s1A0=.17; s2A0=0; V0=1.03; s1V=.27; s2V=0; A10=.66; s1A1=.3     #from https://journals.aps.org/prd/pdf/10.1103/PhysRevD.62.014006 (table IV)
+            A00=.76; s1A0=.17; s2A0=0; V0=1.03; s1V=.27; s2V=0; A10=.66; s1A1=.3     
             s2A1=.2*0; A20=.49; s1A2=.67; s2A2=.16*0        
             A0=f"({A00}/((1-q**2/{Mp}**2)*(1-({s1A0}*q**2/{Mp}**2)+({s2A0}*q**4/{Mp}**4))))"
             V=f"({V0}/((1-q**2/{MV}**2)*(1-({s1V}*q**2/{MV}**2)+({s2V}*q**4/{MV}**4))))"
@@ -668,11 +615,10 @@ class HNLCalc(Utility):
 
         #'D^- -> K^{0*} + e^- + N' form factors
         if pid0 in ['-411','411'] and pid1 in ['313','-313']:
-            #Mp=1.969; MV=2.11
             pidp = "431"
             pidV = "433"
             Mp = self.masses(pidp); MV = self.masses(pidV)
-            A00=.76; s1A0=.17; s2A0=0; V0=1.03; s1V=.27; s2V=0; A10=.66; s1A1=.3     #from https://journals.aps.org/prd/pdf/10.1103/PhysRevD.62.014006 (table IV)
+            A00=.76; s1A0=.17; s2A0=0; V0=1.03; s1V=.27; s2V=0; A10=.66; s1A1=.3    
             s2A1=.2*0; A20=.49; s1A2=.67; s2A2=.16*0        
             A0=f"({A00}/((1-q**2/{Mp}**2)*(1-({s1A0}*q**2/{Mp}**2)+({s2A0}*q**4/{Mp}**4))))"
             V=f"({V0}/((1-q**2/{MV}**2)*(1-({s1V}*q**2/{MV}**2)+({s2V}*q**4/{MV}**4))))"
@@ -682,11 +628,10 @@ class HNLCalc(Utility):
 
         #'B^+ -> \bar{D}*^0 + e^+ + N'
         if (pid0 in ['521','-521'] and pid1 in ['423','-423']):
-            #Mp=6.277; MV=6.842
             pidp = "541"
             pidV = "543"
             Mp = self.masses(pidp); MV = self.mass_543
-            A00=0.69; s1A0=0.58; s2A0=0; V0=0.76; s1V=0.57; s2V=0; A10=0.66; s1A1=0.78      #from https://journals.aps.org/prd/pdf/10.1103/PhysRevD.62.014006 (table X)
+            A00=0.69; s1A0=0.58; s2A0=0; V0=0.76; s1V=0.57; s2V=0; A10=0.66; s1A1=0.78     
             s2A1=0; A20=0.62; s1A2=1.04; s2A2=0
             A0=f"({A00}/((1-q**2/{Mp}**2)*(1-({s1A0}*q**2/{Mp}**2)+({s2A0}*q**4/{Mp}**4))))"
             V=f"({V0}/((1-q**2/{MV}**2)*(1-({s1V}*q**2/{MV}**2)+({s2V}*q**4/{MV}**4))))"
@@ -695,11 +640,10 @@ class HNLCalc(Utility):
             A2=f"({A20}/(1-({s1A2}*q**2/{MV}**2)+({s2A2}*q**4/{MV}**4)))"
         #'B^0 -> D*^- + e^+ + N' form factors
         if (pid0 in ['511','-511'] and pid1 in ['413','-413']):
-            #Mp=6.277; MV=6.842
             pidp = "541"
             pidV = "543"
             Mp = self.masses(pidp); MV = self.mass_543
-            A00=0.69; s1A0=0.58; s2A0=0; V0=0.76; s1V=0.57; s2V=0; A10=0.66; s1A1=0.78      #from https://journals.aps.org/prd/pdf/10.1103/PhysRevD.62.014006 (table X)
+            A00=0.69; s1A0=0.58; s2A0=0; V0=0.76; s1V=0.57; s2V=0; A10=0.66; s1A1=0.78      
             s2A1=0; A20=0.62; s1A2=1.04; s2A2=0
             A0=f"({A00}/((1-q**2/{Mp}**2)*(1-({s1A0}*q**2/{Mp}**2)+({s2A0}*q**4/{Mp}**4))))"
             V=f"({V0}/((1-q**2/{MV}**2)*(1-({s1V}*q**2/{MV}**2)+({s2V}*q**4/{MV}**4))))"
@@ -708,11 +652,10 @@ class HNLCalc(Utility):
             A2=f"({A20}/(1-({s1A2}*q**2/{MV}**2)+({s2A2}*q**4/{MV}**4)))"
         #'B^0_s -> D^*_s^- + e^+ + N' form factors
         if pid0 in ['531','-531'] and pid1 in ['433','-433']:
-            #Mp=6.272; MV=6.332
             pidp = "541"
             pidV = "543"
             Mp = self.masses(pidp); MV = self.mass_543
-            A00=0.67; s1A0=0.35; s2A0=0; V0=0.95; s1V=0.372         #from https://arxiv.org/pdf/1212.3167.pdf (Table 1)
+            A00=0.67; s1A0=0.35; s2A0=0; V0=0.95; s1V=0.372         
             s2V=0; A10=0.70; s1A1=0.463; s2A1=0; A20=0.75; s1A2=1.04; s2A2=0
             A0=f"({A00}/((1-q**2/{Mp}**2)*(1-({s1A0}*q**2/{Mp}**2)+({s2A0}*q**4/{Mp}**4))))"
             V=f"({V0}/((1-q**2/{MV}**2)*(1-({s1V}*q**2/{MV}**2)+({s2V}*q**4/{MV}**4))))"
@@ -721,7 +664,7 @@ class HNLCalc(Utility):
             A2=f"({A20}/(1-({s1A2}*q**2/{MV}**2)+({s2A2}*q**4/{MV}**4)))"
         #'B^+_c -> B*^0 + e^+ + N' form factors
         if pid0 in ['541','-541'] and pid1 in ['513','-513']:
-            A00=-.27; mfitA0=1.86; deltaA0=.13; V0=3.27; mfitV=1.76; deltaV=-.052       #from https://arxiv.org/pdf/hep-ph/0007169.pdf (Table 3)
+            A00=-.27; mfitA0=1.86; deltaA0=.13; V0=3.27; mfitV=1.76; deltaV=-.052       
             A10=.6; mfitA1=3.44; deltaA1=-1.07; A20=10.8; mfitA2=1.73; deltaA2=-0.09
             A0=f"({A00}/(1-(q**2/{mfitA0}**2)-{deltaA0}*(q**2/{mfitA0}**2)**2))"
             V=f"({V0}/(1-(q**2/{mfitV}**2)-{deltaV}*(q**2/{mfitV}**2)**2))"
@@ -730,7 +673,7 @@ class HNLCalc(Utility):
             A2=f"({A20}/(1-(q**2/{mfitA2}**2)-{deltaA2}*(q**2/{mfitA2}**2)**2))"
         #'B^+_c -> B^*_s^0+ e^+ + N' form factors
         if pid0 in ['541','-541'] and pid1 in ['533','-533']:
-            A00=-.33; mfitA0=1.86; deltaA0=.13; V0=3.25; mfitV=1.76; deltaV=-.052       #from https://arxiv.org/pdf/hep-ph/0007169.pdf (Table 3)
+            A00=-.33; mfitA0=1.86; deltaA0=.13; V0=3.25; mfitV=1.76; deltaV=-.052      
             A10=.4; mfitA1=3.44; deltaA1=-1.07; A20=10.4; mfitA2=1.73; deltaA2=-0.09
             A0=f"({A00}/(1-(q**2/{mfitA0}**2)-{deltaA0}*(q**2/{mfitA0}**2)**2))"
             V=f"({V0}/(1-(q**2/{mfitV}**2)-{deltaV}*(q**2/{mfitV}**2)**2))"
@@ -739,10 +682,8 @@ class HNLCalc(Utility):
             A2=f"({A20}/(1-(q**2/{mfitA2}**2)-{deltaA2}*(q**2/{mfitA2}**2)**2))"
         #new modes
         #B+ to rho^0 or omega
-        if pid0 in ["521","-521"] and pid1 in ["113","-113","223","-223"]:       #https://journals.aps.org/prd/pdf/10.1103/PhysRevD.62.014006
+        if pid0 in ["521","-521"] and pid1 in ["113","-113","223","-223"]:       
             cv=(1/2)
-            #Mp=self.masses(pid0)
-            #MV=self.masses('523')
             pidp = "521"
             pidV = "523"
             Mp = self.masses(pidp); MV = self.masses(pidV)
@@ -755,7 +696,7 @@ class HNLCalc(Utility):
             A2=f"({A20}/(1-({s1A2}*q**2/{MV}**2)+({s2A2}*q**4/{MV}**4)))"
         #Bc+ to J/psi
         if pid0 in ['541','-541'] and pid1 in ['443','-443']:
-            A00=0.68; mfitA0=8.20; deltaA0=1.40; V0=0.96; mfitV=5.65; deltaV= 0.0013      #from https://arxiv.org/pdf/hep-ph/0007169.pdf (Table 3)
+            A00=0.68; mfitA0=8.20; deltaA0=1.40; V0=0.96; mfitV=5.65; deltaV= 0.0013      
             A10=0.68; mfitA1=5.91; deltaA1=0.052; A20=-0.004; mfitA2=5.67; deltaA2=-0.004
             A0=f"({A00}/(1-(q**2/{mfitA0}**2)-{deltaA0}*(q**2/{mfitA0}**2)**2))"
             V=f"({V0}/(1-(q**2/{mfitV}**2)-{deltaV}*(q**2/{mfitV}**2)**2))"
@@ -763,8 +704,7 @@ class HNLCalc(Utility):
             A1=f"({A10}/(1-(q**2/{mfitA1}**2)-{deltaA1}*(q**2/{mfitA1}**2)**2))"
             A2=f"({A20}/(1-(q**2/{mfitA2}**2)-{deltaA2}*(q**2/{mfitA2}**2)**2))"
         #\bar{D^0} to \rho^+
-        if pid0 in ["421","-421"] and pid1 in ["213","-213"]:       #https://journals.aps.org/prd/pdf/10.1103/PhysRevD.62.014006
-            #Mp=self.masses(pid0); MV=self.masses('423')
+        if pid0 in ["421","-421"] and pid1 in ["213","-213"]:      
             pidp = "411"
             pidV = "413"
             Mp = self.masses(pidp); MV = self.masses(pidV)
@@ -776,9 +716,8 @@ class HNLCalc(Utility):
             A1=f"({A10}/(1-({s1A1}*q**2/{MV}**2)+({s2A1}*q**4/{MV}**4)))"
             A2=f"({A20}/(1-({s1A2}*q**2/{MV}**2)+({s2A2}*q**4/{MV}**4)))"
         #D^- to \rho^0
-        if pid0 in ["411","-411"] and pid1 in ["113","-113"]:      #https://journals.aps.org/prd/pdf/10.1103/PhysRevD.62.014006
+        if pid0 in ["411","-411"] and pid1 in ["113","-113"]:      
             cv=(1/2)
-            #Mp=self.masses(pid0); MV=self.masses('413')
             pidp = "411"
             pidV = "413"
             Mp = self.masses(pidp); MV = self.masses(pidV)
@@ -790,9 +729,8 @@ class HNLCalc(Utility):
             A1=f"({A10}/(1-({s1A1}*q**2/{MV}**2)+({s2A1}*q**4/{MV}**4)))"
             A2=f"({A20}/(1-({s1A2}*q**2/{MV}**2)+({s2A2}*q**4/{MV}**4)))"
         #D^- to \omega
-        if pid0 in ["411","-411"] and pid1 in ["223","-223"]:       #https://journals.aps.org/prd/pdf/10.1103/PhysRevD.62.014006
+        if pid0 in ["411","-411"] and pid1 in ["223","-223"]:      
             cv=(1/2)
-            #Mp=self.masses(pid0); MV=self.masses('423')
             pidp = "411"
             pidV = "413"
             Mp = self.masses(pidp); MV = self.masses(pidV)
@@ -805,8 +743,7 @@ class HNLCalc(Utility):
             A2=f"({A20}/(1-({s1A2}*q**2/{MV}**2)+({s2A2}*q**4/{MV}**4)))"
 
         #D_s^- \to \bar{K^{*0}}
-        if pid0 in ["431","-431"] and pid1 in ["313","-313"]:       #https://journals.aps.org/prd/pdf/10.1103/PhysRevD.62.014006
-            #Mp=self.masses(pid0); MV=self.masses('433')
+        if pid0 in ["431","-431"] and pid1 in ["313","-313"]:      
             pidp = "411"
             pidV = "413"
             Mp = self.masses(pidp); MV = self.masses(pidV)
@@ -818,8 +755,7 @@ class HNLCalc(Utility):
             A1=f"({A10}/(1-({s1A1}*q**2/{MV}**2)+({s2A1}*q**4/{MV}**4)))"
             A2=f"({A20}/(1-({s1A2}*q**2/{MV}**2)+({s2A2}*q**4/{MV}**4)))"
         #D_s^- \to \phi
-        if pid0 in ["431","-431"] and pid1 in ["333","-333"]:       #https://journals.aps.org/prd/pdf/10.1103/PhysRevD.62.014006
-            #Mp=self.masses(pid0); MV=self.masses('433')
+        if pid0 in ["431","-431"] and pid1 in ["333","-333"]:       
             pidp = "431"
             pidV = "433"
             Mp = self.masses(pidp); MV = self.masses(pidV)
@@ -831,8 +767,7 @@ class HNLCalc(Utility):
             A1=f"({A10}/(1-({s1A1}*q**2/{MV}**2)+({s2A1}*q**4/{MV}**4)))"
             A2=f"({A20}/(1-({s1A2}*q**2/{MV}**2)+({s2A2}*q**4/{MV}**4)))"
         #B^0 \to \rho^-
-        if pid0 in ["511","-511"] and pid1 in ["213","-213"]:       #https://journals.aps.org/prd/pdf/10.1103/PhysRevD.62.014006
-            #Mp=self.masses(pid0); MV=self.masses('513')
+        if pid0 in ["511","-511"] and pid1 in ["213","-213"]:      
             pidp = "521"
             pidV = "523"
             Mp = self.masses(pidp); MV = self.masses(pidV)
@@ -844,9 +779,8 @@ class HNLCalc(Utility):
             A1=f"({A10}/(1-({s1A1}*q**2/{MV}**2)+({s2A1}*q**4/{MV}**4)))"
             A2=f"({A20}/(1-({s1A2}*q**2/{MV}**2)+({s2A2}*q**4/{MV}**4)))"
         #B^- \to \omega; used rho- form factors
-        if pid0 in ["511","-511"] and pid1 in ["223","-223"]:       #https://journals.aps.org/prd/pdf/10.1103/PhysRevD.62.014006
+        if pid0 in ["511","-511"] and pid1 in ["223","-223"]:      
             cv=(1/2)
-            #Mp=self.masses(pid0); MV=self.masses('513')
             pidp = "511"
             pidV = "513"
             Mp = self.masses(pidp); MV = self.masses(pidV)
@@ -858,8 +792,7 @@ class HNLCalc(Utility):
             A1=f"({A10}/(1-({s1A1}*q**2/{MV}**2)+({s2A1}*q**4/{MV}**4)))"
             A2=f"({A20}/(1-({s1A2}*q**2/{MV}**2)+({s2A2}*q**4/{MV}**4)))"
         #B_s^0 \to K^*-
-        if pid0 in ["531","-531"] and pid1 in ["323","-323"]:       #https://journals.aps.org/prd/pdf/10.1103/PhysRevD.62.014006
-            #Mp=self.masses(pid0); MV=self.masses('533')
+        if pid0 in ["531","-531"] and pid1 in ["323","-323"]:       
             pidp = "521"
             pidV = "523"
             Mp = self.masses(pidp); MV = self.masses(pidV)
@@ -872,7 +805,6 @@ class HNLCalc(Utility):
             A2=f"({A20}/(1-({s1A2}*q**2/{MV}**2)+({s2A2}*q**4/{MV}**4)))"
         #B_c^+ \to D^{*0} 
         if pid0 in ["541","-541"] and pid1 in ["423","-423"]:
-            #Mp=self.masses(pid0); MV=self.masses('543')
             pidp = "521"
             pidV = "523"
             Mp = self.masses(pidp); MV = self.masses(pidV)
@@ -883,45 +815,46 @@ class HNLCalc(Utility):
             #form factors for A1 and A2
             A1=f"({A10}/(1-({s1A1}*q**2/{MV}**2)+({s2A1}*q**4/{MV}**4)))"
             A2=f"({A20}/(1-({s1A2}*q**2/{MV}**2)+({s2A2}*q**4/{MV}**4)))" 
-
-
         #form factors
-        f1=f"({V}/(self.masses('{pid0}')+self.masses('{pid1}')))"
-        f2=f"((self.masses('{pid0}')+self.masses('{pid1}'))*{A1})"
-        f3=f"(-{A2}/(self.masses('{pid0}')+self.masses('{pid1}')))"
-        f4=f"((self.masses('{pid1}')*(2*{A0}-{A1}-{A2})+self.masses('{pid0}')*({A2}-{A1}))/q**2)"
+        f1=f"({V}/({m0}+{m1}))"
+        f2=f"(({m0}+{m1})*{A1})"
+        f3=f"(-{A2}/({m0}+{m1}))"
+        f4=f"(({m1}*(2*{A0}-{A1}-{A2})+{m0}*({A2}-{A1}))/q**2)"
         f5=f"({f3}+{f4})"
         #s1A0 is sigma_1(A0) etc.
-        omegasqr=f"(self.masses('{pid0}')**2-self.masses('{pid1}')**2+m3**2-self.masses('{pid2}')**2-2*self.masses('{pid0}')*energy)"
-        Omegasqr=f"(self.masses('{pid0}')**2-self.masses('{pid1}')**2-q**2)"
-        prefactor=f"(({cv})*({tauH}*coupling**2*{VHV}**2*{GF}**2)/(32*np.pi**3*self.masses('{pid0}')**2))*{self.vcoupling[str(abs(int(pid2)))]}**2"
-        term1=f"({f2}**2/2)*(q**2-m3**2-self.masses('{pid2}')**2+{omegasqr}*(({Omegasqr}-{omegasqr})/self.masses('{pid1}')**2))"
-        term2=f"({f5}**2/2)*(m3**2+self.masses('{pid2}')**2)*(q**2-m3**2+self.masses('{pid2}')**2)*(({Omegasqr}**2/(4*self.masses('{pid1}')**2))-q**2)"
-        term3=f"2*{f3}**2*self.masses('{pid1}')**2*(({Omegasqr}**2/(4*self.masses('{pid1}')**2))-q**2)*(m3**2+self.masses('{pid2}')**2-q**2+{omegasqr}*(({Omegasqr}-{omegasqr})/self.masses('{pid1}')**2))"
-        term4=f"2*{f3}*{f5}*(m3**2*{omegasqr}+({Omegasqr}-{omegasqr})*self.masses('{pid2}')**2)*(({Omegasqr}**2/(4*self.masses('{pid1}')**2))-q**2)"
-        term5=f"2*{f1}*{f2}*(q**2*(2*{omegasqr}-{Omegasqr})+{Omegasqr}*(m3**2-self.masses('{pid2}')**2))"
-        term6=f"({f2}*{f5}/2)*({omegasqr}*({Omegasqr}/self.masses('{pid1}')**2)*(m3**2-self.masses('{pid2}')**2)+({Omegasqr}**2/self.masses('{pid1}')**2)*self.masses('{pid2}')**2+2*(m3**2-self.masses('{pid2}')**2)**2-2*q**2*(m3**2+self.masses('{pid2}')**2))"
-        term7=f"{f2}*{f3}*({Omegasqr}*{omegasqr}*(({Omegasqr}-{omegasqr})/self.masses('{pid1}')**2)+2*{omegasqr}*(self.masses('{pid2}')**2-m3**2)+{Omegasqr}*(m3**2-self.masses('{pid2}')**2-q**2))"
-        term8=f"{f1}**2*({Omegasqr}**2*(q**2-m3**2+self.masses('{pid2}')**2)-2*self.masses('{pid1}')**2*(q**4-(m3**2-self.masses('{pid2}')**2)**2)+2*{omegasqr}*{Omegasqr}*(m3**2-q**2-self.masses('{pid2}')**2)+2*{omegasqr}**2*q**2)"
+        omegasqr=f"({m0}**2-{m1}**2+m3**2-{m2}**2-2*{m0}*energy)"
+        Omegasqr=f"({m0}**2-{m1}**2-q**2)"
+        prefactor=f"(({cv})*({tauH}*coupling**2*{VHV}**2*{GF}**2)/(32*np.pi**3*{m0}**2))*{self.vcoupling[str(abs(int(pid2)))]}**2"
+        term1=f"({f2}**2/2)*(q**2-m3**2-{m2}**2+{omegasqr}*(({Omegasqr}-{omegasqr})/{m1}**2))"
+        term2=f"({f5}**2/2)*(m3**2+{m2}**2)*(q**2-m3**2+{m2}**2)*(({Omegasqr}**2/(4*{m1}**2))-q**2)"
+        term3=f"2*{f3}**2*{m1}**2*(({Omegasqr}**2/(4*{m1}**2))-q**2)*(m3**2+{m2}**2-q**2+{omegasqr}*(({Omegasqr}-{omegasqr})/{m1}**2))"
+        term4=f"2*{f3}*{f5}*(m3**2*{omegasqr}+({Omegasqr}-{omegasqr})*{m2}**2)*(({Omegasqr}**2/(4*{m1}**2))-q**2)"
+        term5=f"2*{f1}*{f2}*(q**2*(2*{omegasqr}-{Omegasqr})+{Omegasqr}*(m3**2-{m2}**2))"
+        term6=f"({f2}*{f5}/2)*({omegasqr}*({Omegasqr}/{m1}**2)*(m3**2-{m2}**2)+({Omegasqr}**2/{m1}**2)*{m2}**2+2*(m3**2-{m2}**2)**2-2*q**2*(m3**2+{m2}**2))"
+        term7=f"{f2}*{f3}*({Omegasqr}*{omegasqr}*(({Omegasqr}-{omegasqr})/{m1}**2)+2*{omegasqr}*({m2}**2-m3**2)+{Omegasqr}*(m3**2-{m2}**2-q**2))"
+        term8=f"{f1}**2*({Omegasqr}**2*(q**2-m3**2+{m2}**2)-2*{m1}**2*(q**4-(m3**2-{m2}**2)**2)+2*{omegasqr}*{Omegasqr}*(m3**2-q**2-{m2}**2)+2*{omegasqr}**2*q**2)"
         bra=str(prefactor) + "*(" + term1 + "+" + term2 + "+" + term3 + "+" + term4 + "+" + term5 + "+" + term6 + "+" + term7 + "+" + term8 + ")"
         return(bra)
 
     #pid0 is tau, pid1 is produced lepton and pid2 is the neutrino
     #3-body differential branching fraction dBr/(dE) for 3-body leptonic decay of tau lepton
     def get_3body_dbr_tau(self,pid0,pid1,pid2):
+        m0=self.masses(pid0)
+        m1=self.masses(pid1)
         if pid2=='16' or pid2=='-16':
             SecToGev=1./(6.582122*pow(10.,-25.))
             tautau=self.tau(pid0)*SecToGev
             GF=1.166378*10**(-5) #GeV^(-2)
-            prefactor=f"({tautau}*{GF}**2*coupling**2*self.masses('{pid0}')**2*energy/(2*np.pi**3))*{self.vcoupling[str(abs(int(pid1)))]}**2"
-            dbr=f"{prefactor}*(1+((mass**2-self.masses('{pid1}')**2)/self.masses('{pid0}')**2)-2*(energy/self.masses('{pid0}')))*(1-(self.masses('{pid1}')**2/(self.masses('{pid0}')**2+mass**2-2*energy*self.masses('{pid0}'))))*np.sqrt(energy**2-mass**2)"
+            prefactor=f"({tautau}*{GF}**2*coupling**2*{m0}**2*energy/(2*np.pi**3))*{self.vcoupling[str(abs(int(pid1)))]}**2"
+            dbr=f"{prefactor}*(1+((mass**2-{m1}**2)/{m0}**2)-2*(energy/{m0}))*(1-({m1}**2/({m0}**2+mass**2-2*energy*{m0})))*np.sqrt(energy**2-mass**2)"
         else:
             SecToGev=1./(6.582122*pow(10.,-25.))
             tautau=self.tau(pid0)*SecToGev
             GF=1.166378*10**(-5) #GeV^(-2)
-            prefactor=f"({tautau}*{GF}**2*coupling**2*self.masses('{pid0}')**2/(4*np.pi**3))*{self.vcoupling[str(abs(int(pid0)))]}**2"
-            dbr=f"{prefactor}*(1-self.masses('{pid1}')**2/(self.masses('{pid0}')**2+mass**2-2*energy*self.masses('{pid0}')))**2*np.sqrt(energy**2-mass**2)*((self.masses('{pid0}')-energy)*(1-(mass**2+self.masses('{pid1}')**2)/self.masses('{pid0}')**2)-(1-self.masses('{pid1}')**2/(self.masses('{pid0}')**2+mass**2-2*energy*self.masses('{pid0}')))*((self.masses('{pid0}')-energy)**2/self.masses('{pid0}')+((energy**2-mass**2)/(3*self.masses('{pid0}')))))"
+            prefactor=f"({tautau}*{GF}**2*coupling**2*{m0}**2/(4*np.pi**3))*{self.vcoupling[str(abs(int(pid0)))]}**2"
+            dbr=f"{prefactor}*(1-{m1}**2/({m0}**2+mass**2-2*energy*{m0}))**2*np.sqrt(energy**2-mass**2)*(({m0}-energy)*(1-(mass**2+{m1}**2)/{m0}**2)-(1-{m1}**2/({m0}**2+mass**2-2*energy*{m0}))*(({m0}-energy)**2/{m0}+((energy**2-mass**2)/(3*{m0}))))"
         return(dbr)
+
 
     #input path to given folder and it removes all files in that folder
     def remove_files_from_folder(self,path):
@@ -1026,14 +959,12 @@ class HNLCalc(Utility):
         for description, pid_had, sign_lep in channels_2body:
             for pid_lep in ["11","13","15"]:
                 if self.vcoupling[pid_lep] <1e-9: continue
-                #generator = self.generators[abs(int(pid_had))]
                 label= "2body_" + pid_had + "_" + sign_lep+pid_lep
                 br = self.get_2body_br(pid_had, sign_lep+pid_lep)
                 dic = {'label': label, 'pid0': pid_had, 'pid1':sign_lep+pid_lep, 'br': br , 'description': description.replace("l",lep[pid_lep])}
                 output.append(dic)
         for description, pid_tau, pid_had, sign_had in channels_2body_tau:
                 if self.vcoupling["15"] <1e-9: continue
-                #generator = self.generators[15]
                 label= "2body_tau_" + pid_tau + "_" + sign_had+pid_had
                 br = self.get_2body_br_tau(pid_tau, sign_had+pid_had)
                 dic = {'label': label, 'pid0': pid_tau, 'pid1':sign_had+pid_had, 'br': br , 'description': description.replace("l",lep[pid_lep])}
@@ -1151,7 +1082,6 @@ class HNLCalc(Utility):
             for pid_lep in ["11","13","15"]:
                 if self.vcoupling[pid_lep] <1e-9: continue
                 integration = "dq2dE"
-                #generator = self.generators[abs(int(pid_parent))]
                 label = "3body_pseudo_" + pid_parent + "_" +pid_daughter+ "_" + sign_lep+pid_lep
                 br =  self.get_3body_dbr_pseudoscalar(pid_parent,pid_daughter,sign_lep+pid_lep)
                 dic = {'label': label, 'pid0': pid_parent,'pid1': pid_daughter,'pid2': sign_lep+pid_lep, 'br': br,'integration': integration, 'description': description.replace("l",lep[pid_lep])} 
@@ -1162,20 +1092,16 @@ class HNLCalc(Utility):
             for pid_lep in ["11","13","15"]:
                 if self.vcoupling[pid_lep] <1e-9: continue
                 integration = "dq2dE"
-                #generator = self.generators[abs(int(pid_parent))]
                 label = "3body_vector_" + pid_parent + "_" +pid_daughter+ "_" + sign_lep+pid_lep
                 br =  self.get_3body_dbr_vector(pid_parent,pid_daughter,sign_lep+pid_lep)
                 dic = {'label': label, 'pid0': pid_parent,'pid1': pid_daughter,'pid2': sign_lep+pid_lep, 'br': br,'integration': integration, 'description': description.replace("l",lep[pid_lep])} 
                 output.append(dic)
-        
-        
 
         #Tau
         for description, pid_parent, pid_nu, sign_lep in channels_tau_1: 
                 for pid_lep in ["11","13"]:
                     if self.vcoupling[pid_lep] <1e-9: continue
                     integration = "dE"
-                    #generator = self.generators[abs(int(pid_parent))]
                     label = "3body_tau_" + pid_parent + "_" +sign_lep+pid_lep+ "_" + pid_nu
                     br =  self.get_3body_dbr_tau(pid_parent,sign_lep+pid_lep,pid_nu)
                     dic = {'label': label, 'pid0': pid_parent,'pid1': sign_lep+pid_lep,'pid2': pid_nu, 'br': br,'integration': integration, 'description': description.replace("l",lep[pid_lep])} 
@@ -1187,7 +1113,6 @@ class HNLCalc(Utility):
                     pid_nu = str(int(pid_lep)+1)
                     if self.vcoupling["15"] <1e-9: continue
                     integration = "dE"
-                    #generator = self.generators[abs(int(pid_parent))]
                     label = "3body_tau_" + pid_parent + "_" +sign_lep+pid_lep+ "_" + pid_nu
                     br =  self.get_3body_dbr_tau(pid_parent,sign_lep+pid_lep,pid_nu)
                     dic = {'label': label, 'pid0': pid_parent,'pid1': sign_lep+pid_lep,'pid2': pid_nu, 'br': br,'integration': integration, 'description': description.replace("l",lep[pid_lep])} 
@@ -1203,8 +1128,8 @@ class HNLCalc(Utility):
      ['bounds_100/bounds_atlas_2022.txt'  , 'Atlas \n (2022)'        , 6.05   , 0.00035  ,  -35 ], 
      ['bounds_100/bounds_charm.txt'       , 'CHARM'                  , 0.8  , 0.00019    , -35], 
      ['bounds_100/bounds_bebc_barouki.txt', 'BEBC \n (Barouki et al)', 1.114 , 0.000055 ,  -15 ], 
-    ['bounds_100/bounds_belle.txt'       , 'Belle'                  , 1.0 , 0.005  ,  -20 ], 
-    ['bounds_100/bounds_delphi_long.txt' , 'Delphi \n (long)'       , 2.17 , 0.0028   ,  -27 ], 
+     ['bounds_100/bounds_belle.txt'       , 'Belle'                  , 1.0 , 0.005  ,  -20 ], 
+     ['bounds_100/bounds_delphi_long.txt' , 'Delphi \n (long)'       , 2.17 , 0.0028   ,  -27 ], 
      ['bounds_100/bounds_t2k.txt'         , 'T2K'                    , 0.45 , 2.6e-05 ,  50], 
      ['bounds_100/bounds_cosmo.txt'       , 'BBN'                    , 0.38  , 1.3e-5 , -40], 
      ['bounds_100/bounds_cms_2022.txt'    , 'CMS \n (2022)'          , 6.0   , 0.001   , -35], 
