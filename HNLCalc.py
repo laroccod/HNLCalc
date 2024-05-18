@@ -17,6 +17,8 @@ from scipy import interpolate
 from matplotlib import gridspec
 from numba import jit
 from particle import Particle
+from cycler import cycler
+
 
 
 
@@ -127,6 +129,34 @@ class Utility():
             integral += eval(br) * (emax-emin)/float(nsample)
 
         return integral 
+
+    #initializes plot
+    def initialize_plot(x_label, y_label, title, xlims, ylims):
+        #setup figures
+        fig,ax = plt.subplots(1,1)
+
+        #define custom color cycler
+        custom_cycler = (cycler(color=['tab:blue','tab:orange','tab:purple', 'y', 'r','green','c'])* 
+                        cycler(ls=['-', '--', '-.', 'dotted']))
+
+        ax.set_prop_cycle(custom_cycler)
+
+        fig.set_size_inches(18,7, forward=True)
+
+        ax.set_title(rf"{title}",fontsize = 16)
+
+        ax.set(xscale = 'log', yscale = 'log',xlim=xlims,ylim = ylims)
+
+        ax.tick_params(axis='both', which='major',direction='in',top=True,right=True)
+
+        ax.tick_params(axis='both', which='minor',direction='in',top=True,right=True)
+
+        ax.set_xlabel(x_label,fontsize=15)
+        ax.set_ylabel(y_label,fontsize=15)
+        ax.tick_params(axis='x', labelsize=12)
+        ax.tick_params(axis='y', labelsize=12)
+
+        return(ax)
 
 
 
@@ -855,6 +885,38 @@ class HNLCalc(Utility):
             dbr=f"{prefactor}*(1-{m1}**2/({m0}**2+mass**2-2*energy*{m0}))**2*np.sqrt(energy**2-mass**2)*(({m0}-energy)*(1-(mass**2+{m1}**2)/{m0}**2)-(1-{m1}**2/({m0}**2+mass**2-2*energy*{m0}))*(({m0}-energy)**2/{m0}+((energy**2-mass**2)/(3*{m0}))))"
         return(dbr)
 
+    #finds the total br for a given parent particle and returns masses, br_tot
+    #key is the symbol for the parent particle
+    def parent_br(self, coupling, masses, key, tf_2body, tf_3body):
+        br_tot = np.array([0.0 for n in range(len(masses))])
+        #2 body grouping
+        if key in self.get_channels_2body()['parent'].keys() and tf_2body==True:
+            #add all brs for like parent mesons
+            for n in range(len(self.get_channels_2body()['parent'][key])):
+                _, pid0, pid1, br, _ = self.get_channels_2body()['parent'][key][n].values()
+                #print(br)
+                print(pid0)
+                #mass=.3
+                #print(eval(br))
+                for m in range(len(masses)):
+                    mass=masses[m]
+                    if mass<=self.masses(pid0)-self.masses(pid1):
+                        print(mass,eval(br))
+                #br_arr = np.array([eval(br) if mass<self.masses(pid0)-self.masses(pid1) else 0 for mass in masses])
+                br_arr = np.array([eval(br) for mass in masses])
+                br_tot += br_arr
+
+        #3 body grouping
+        if key in self.get_channels_3body()['parent'].keys() and tf_3body==True:
+            #add all brs for like parent mesons
+            for n in range(len(self.get_channels_3body()['parent'][key])):
+                label, pid0, pid1, pid2 , br, integration, latex_label = self.get_channels_3body()['parent'][key][n].values()
+                m0, m1, m2 = self.masses(pid0), self.masses(pid1), self.masses(pid2)
+                br_arr = np.array([self.integrate_3body_br(
+                    br, mass, m0, m1, m2, integration=integration) if mass<m0-m1-m2 else 0 for mass in masses])
+                br_tot += br_arr
+        return masses, br_tot
+
 
     #input path to given folder and it removes all files in that folder
     def remove_files_from_folder(self,path):
@@ -928,6 +990,9 @@ class HNLCalc(Utility):
 
     def get_channels_2body(self,):
         lep = {"11":r"e","13":r"\mu","15":r"\tau"}
+
+        dic_2body_mode = {"2body_pseudo": [], "2body_tau": []}
+        dic_2body_parent = {r"$\pi$": [], r"$K$": [], r"$D$": [], r"$D_s$": [], r"$B$": [], r"$B_c$": [], r"$\tau$": []}
         
         channels_2body = [
             [r'$D^+ \to l^+ + N$'    , '411', '-'],
@@ -962,20 +1027,41 @@ class HNLCalc(Utility):
                 label= "2body_" + pid_had + "_" + sign_lep+pid_lep
                 br = self.get_2body_br(pid_had, sign_lep+pid_lep)
                 dic = {'label': label, 'pid0': pid_had, 'pid1':sign_lep+pid_lep, 'br': br , 'description': description.replace("l",lep[pid_lep])}
-                output.append(dic)
+                #output.append(dic)
+                dic_2body_mode["2body_pseudo"].append(dic)
+                if str(abs(int(pid_had))) == "211":
+                    dic_2body_parent[r"$\pi$"].append(dic)
+                if str(abs(int(pid_had))) == "321":
+                    dic_2body_parent[r"$K$"].append(dic)
+                if str(abs(int(pid_had))) in ["411"]:
+                    dic_2body_parent[r"$D$"].append(dic)
+                if str(abs(int(pid_had))) in ["431"]:
+                    dic_2body_parent[r"$D_s$"].append(dic)
+                if str(abs(int(pid_had))) in ["521"]:
+                    dic_2body_parent[r"$B$"].append(dic)
+                if str(abs(int(pid_had))) in ["541"]:
+                    dic_2body_parent[r"$B_c$"].append(dic)
+
+
         for description, pid_tau, pid_had, sign_had in channels_2body_tau:
                 if self.vcoupling["15"] <1e-9: continue
                 label= "2body_tau_" + pid_tau + "_" + sign_had+pid_had
                 br = self.get_2body_br_tau(pid_tau, sign_had+pid_had)
                 dic = {'label': label, 'pid0': pid_tau, 'pid1':sign_had+pid_had, 'br': br , 'description': description.replace("l",lep[pid_lep])}
-                output.append(dic)
-                
-        return output
+                #output.append(dic)
+                dic_2body_mode["2body_tau"].append(dic)
+                dic_2body_parent["tau"].append(dic)
+        
+        dic_2body = {"mode": dic_2body_mode, "parent": dic_2body_parent}
+
+        return dic_2body
 
     def get_channels_3body(self,):
         
         lep = {"11":r"e","13":r"\mu","15":r"\tau"}
-        
+
+        dic_3body_mode = {"3body_pseudo": [], "3body_vector": [], "3body_tau": [], "3body_tau_nutau": []}
+        dic_3body_parent = {r"$\pi$": [], r"$K$": [], r"$K_S$": [], r"$K_L$": [], r"$D$": [], r"$D_0$": [], r"$D_s$": [], r"$B$": [], r"$B_0$": [], r"$B^0_s$": [], r"$B_c$": [], r"$\tau$": []}
         channels_pseudo = [
             [r'$D^0 \to K^- + l^+ + N$'             , '421' , '-321' , '-'],
             [r'$D^0 \to K^+ + l^- + N$'             , '-421', '321'  , '' ],
@@ -1085,7 +1171,31 @@ class HNLCalc(Utility):
                 label = "3body_pseudo_" + pid_parent + "_" +pid_daughter+ "_" + sign_lep+pid_lep
                 br =  self.get_3body_dbr_pseudoscalar(pid_parent,pid_daughter,sign_lep+pid_lep)
                 dic = {'label': label, 'pid0': pid_parent,'pid1': pid_daughter,'pid2': sign_lep+pid_lep, 'br': br,'integration': integration, 'description': description.replace("l",lep[pid_lep])} 
-                output.append(dic)
+                dic_3body_mode["3body_pseudo"].append(dic)
+                #group by parent
+                #kaons
+                if str(abs(int(pid_parent))) in ["321"]:
+                    dic_3body_parent[r"$K$"].append(dic)
+                if str(abs(int(pid_parent))) in ["310"]:
+                    dic_3body_parent[r"$K_S$"].append(dic)
+                if str(abs(int(pid_parent))) in ["130"]:
+                    dic_3body_parent[r"$K_L$"].append(dic)
+                #D mesons
+                if str(abs(int(pid_parent))) in ["411"]:
+                    dic_3body_parent[r"$D$"].append(dic)
+                if str(abs(int(pid_parent))) in ["421"]:
+                    dic_3body_parent[r"$D_0$"].append(dic)
+                if str(abs(int(pid_parent))) in ["431"]:
+                    dic_3body_parent[r"$D_s$"].append(dic)
+                #B mesons
+                if str(abs(int(pid_parent))) in ["521"]:
+                    dic_3body_parent[r"$B$"].append(dic)
+                if str(abs(int(pid_parent))) in ["511"]:
+                    dic_3body_parent[r"$B_0$"].append(dic)
+                if str(abs(int(pid_parent))) in ["531"]:
+                    dic_3body_parent[r"$B^0_s$"].append(dic)
+                if str(abs(int(pid_parent))) in ["541"]:
+                    dic_3body_parent[r"$B_c$"].append(dic)
 
         #Vector
         for description, pid_parent, pid_daughter, sign_lep in channels_vector: 
@@ -1095,7 +1205,31 @@ class HNLCalc(Utility):
                 label = "3body_vector_" + pid_parent + "_" +pid_daughter+ "_" + sign_lep+pid_lep
                 br =  self.get_3body_dbr_vector(pid_parent,pid_daughter,sign_lep+pid_lep)
                 dic = {'label': label, 'pid0': pid_parent,'pid1': pid_daughter,'pid2': sign_lep+pid_lep, 'br': br,'integration': integration, 'description': description.replace("l",lep[pid_lep])} 
-                output.append(dic)
+                dic_3body_mode["3body_vector"].append(dic)
+                #group by parent
+                #kaons
+                if str(abs(int(pid_parent))) in ["321"]:
+                    dic_3body_parent[r"$K$"].append(dic)
+                if str(abs(int(pid_parent))) in ["310"]:
+                    dic_3body_parent[r"$K_S$"].append(dic)
+                if str(abs(int(pid_parent))) in ["130"]:
+                    dic_3body_parent[r"$K_L$"].append(dic)
+                #D mesons
+                if str(abs(int(pid_parent))) in ["411"]:
+                    dic_3body_parent[r"$D$"].append(dic)
+                if str(abs(int(pid_parent))) in ["421"]:
+                    dic_3body_parent[r"$D_0$"].append(dic)
+                if str(abs(int(pid_parent))) in ["431"]:
+                    dic_3body_parent[r"$D_s$"].append(dic)
+                #B mesons
+                if str(abs(int(pid_parent))) in ["521"]:
+                    dic_3body_parent[r"$B$"].append(dic)
+                if str(abs(int(pid_parent))) in ["511"]:
+                    dic_3body_parent[r"$B_0$"].append(dic)
+                if str(abs(int(pid_parent))) in ["531"]:
+                    dic_3body_parent[r"$B^0_s$"].append(dic)
+                if str(abs(int(pid_parent))) in ["541"]:
+                    dic_3body_parent[r"$B_c$"].append(dic)
 
         #Tau
         for description, pid_parent, pid_nu, sign_lep in channels_tau_1: 
@@ -1105,8 +1239,8 @@ class HNLCalc(Utility):
                     label = "3body_tau_" + pid_parent + "_" +sign_lep+pid_lep+ "_" + pid_nu
                     br =  self.get_3body_dbr_tau(pid_parent,sign_lep+pid_lep,pid_nu)
                     dic = {'label': label, 'pid0': pid_parent,'pid1': sign_lep+pid_lep,'pid2': pid_nu, 'br': br,'integration': integration, 'description': description.replace("l",lep[pid_lep])} 
-                    output.append(dic)
-        
+                    dic_3body_mode["3body_tau_nutau"].append(dic)
+                    dic_3body_parent[r"$\tau$"].append(dic)
 
         for description, pid_parent, sign_lep in channels_tau_2: 
                 for pid_lep in ["11","13"]:
@@ -1116,9 +1250,12 @@ class HNLCalc(Utility):
                     label = "3body_tau_" + pid_parent + "_" +sign_lep+pid_lep+ "_" + pid_nu
                     br =  self.get_3body_dbr_tau(pid_parent,sign_lep+pid_lep,pid_nu)
                     dic = {'label': label, 'pid0': pid_parent,'pid1': sign_lep+pid_lep,'pid2': pid_nu, 'br': br,'integration': integration, 'description': description.replace("l",lep[pid_lep])} 
-                    output.append(dic)
-                    
-        return output
+                    dic_3body_mode["3body_tau"].append(dic)
+                    dic_3body_parent[r"$\tau$"].append(dic)
+
+        dic_3body = {"mode": dic_3body_mode, "parent": dic_3body_parent}
+
+        return dic_3body
 
     def get_bounds(self):
 
