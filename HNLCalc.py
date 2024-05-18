@@ -156,7 +156,7 @@ class Utility():
         ax.tick_params(axis='x', labelsize=12)
         ax.tick_params(axis='y', labelsize=12)
 
-        return(ax)
+        return(fig,ax)
 
 
 
