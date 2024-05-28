@@ -131,7 +131,7 @@ class Utility():
         return integral 
 
     #initializes plot
-    def initialize_plot(x_label, y_label, title, xlims, ylims):
+    def initialize_plot(x_label, y_label, title, xlims, ylims, scale = 'log'):
         #setup figures
         fig,ax = plt.subplots(1,1)
 
@@ -145,7 +145,7 @@ class Utility():
 
         ax.set_title(rf"{title}",fontsize = 16)
 
-        ax.set(xscale = 'log', yscale = 'log',xlim=xlims,ylim = ylims)
+        if scale == 'log': ax.set(xscale = 'log', yscale = 'log',xlim=xlims,ylim = ylims)
 
         ax.tick_params(axis='both', which='major',direction='in',top=True,right=True)
 
@@ -325,6 +325,8 @@ class HNLCalc(Utility):
     # Branching fraction
     #pid0 is parent meson, pid1 is daughter meson
     def get_2body_br(self,pid0,pid1):
+        pid0=str(pid0)
+        pid1=str(pid1)
         #read constant
         mH, mLep, tauH = self.masses(pid0), self.masses(pid1), self.tau(pid0)
         vH, fH = self.VH(pid0), self.fH(pid0)
@@ -338,6 +340,8 @@ class HNLCalc(Utility):
         return br
 
     def get_2body_br_tau(self,pid0,pid1):
+        pid0 = str(pid0)
+        pid1 = str(pid1)
         if pid1 in ['213','-213','323','-323']:
             if pid1 in ['213','-213']: grho = 0.102
             if pid1 in ['323', '-323']: grho = 0.217*self.masses(pid1)
@@ -443,6 +447,9 @@ class HNLCalc(Utility):
     #3-body differential branching fraction dBr/(dq^2dE) for decay of pseudoscalar to pseudoscalar meson
     #pid0 is parent meson pid1 is daughter meson pid2 is lepton pid3 is HNL
     def get_3body_dbr_pseudoscalar(self,pid0,pid1,pid2):
+        pid0 = str(pid0)
+        pid1 = str(pid1)
+        pid2 = str(pid2)
 
         # read constant
         mH, mHp, mLep = self.masses(pid0), self.masses(pid1), self.masses(pid2)
@@ -1025,9 +1032,8 @@ class HNLCalc(Utility):
             for pid_lep in ["11","13","15"]:
                 if self.vcoupling[pid_lep] <1e-9: continue
                 label= "2body_" + pid_had + "_" + sign_lep+pid_lep
-                br = self.get_2body_br(pid_had, sign_lep+pid_lep)
+                br = f"hnl.get_2body_br({str(pid_had)}, {str(sign_lep+pid_lep)})"
                 dic = {'label': label, 'pid0': pid_had, 'pid1':sign_lep+pid_lep, 'br': br , 'description': description.replace("l",lep[pid_lep])}
-                #output.append(dic)
                 dic_2body_mode["2body_pseudo"].append(dic)
                 if str(abs(int(pid_had))) == "211":
                     dic_2body_parent[r"$\pi$"].append(dic)
@@ -1046,11 +1052,10 @@ class HNLCalc(Utility):
         for description, pid_tau, pid_had, sign_had in channels_2body_tau:
                 if self.vcoupling["15"] <1e-9: continue
                 label= "2body_tau_" + pid_tau + "_" + sign_had+pid_had
-                br = self.get_2body_br_tau(pid_tau, sign_had+pid_had)
+                br = f"hnl.get_2body_br_tau({pid_tau},{sign_had+pid_had})"
                 dic = {'label': label, 'pid0': pid_tau, 'pid1':sign_had+pid_had, 'br': br , 'description': description.replace("l",lep[pid_lep])}
-                #output.append(dic)
                 dic_2body_mode["2body_tau"].append(dic)
-                dic_2body_parent["tau"].append(dic)
+                dic_2body_parent[r"$\tau$"].append(dic)
         
         dic_2body = {"mode": dic_2body_mode, "parent": dic_2body_parent}
 
@@ -1169,7 +1174,7 @@ class HNLCalc(Utility):
                 if self.vcoupling[pid_lep] <1e-9: continue
                 integration = "dq2dE"
                 label = "3body_pseudo_" + pid_parent + "_" +pid_daughter+ "_" + sign_lep+pid_lep
-                br =  self.get_3body_dbr_pseudoscalar(pid_parent,pid_daughter,sign_lep+pid_lep)
+                br = f"hnl.get_3body_dbr_pseudoscalar({pid_parent},{pid_daughter},{sign_lep+pid_lep})"
                 dic = {'label': label, 'pid0': pid_parent,'pid1': pid_daughter,'pid2': sign_lep+pid_lep, 'br': br,'integration': integration, 'description': description.replace("l",lep[pid_lep])} 
                 dic_3body_mode["3body_pseudo"].append(dic)
                 #group by parent
@@ -1203,7 +1208,7 @@ class HNLCalc(Utility):
                 if self.vcoupling[pid_lep] <1e-9: continue
                 integration = "dq2dE"
                 label = "3body_vector_" + pid_parent + "_" +pid_daughter+ "_" + sign_lep+pid_lep
-                br =  self.get_3body_dbr_vector(pid_parent,pid_daughter,sign_lep+pid_lep)
+                br =  f"hnl.get_3body_dbr_vector({pid_parent},{pid_daughter},{sign_lep+pid_lep})"
                 dic = {'label': label, 'pid0': pid_parent,'pid1': pid_daughter,'pid2': sign_lep+pid_lep, 'br': br,'integration': integration, 'description': description.replace("l",lep[pid_lep])} 
                 dic_3body_mode["3body_vector"].append(dic)
                 #group by parent
@@ -1237,7 +1242,7 @@ class HNLCalc(Utility):
                     if self.vcoupling[pid_lep] <1e-9: continue
                     integration = "dE"
                     label = "3body_tau_" + pid_parent + "_" +sign_lep+pid_lep+ "_" + pid_nu
-                    br =  self.get_3body_dbr_tau(pid_parent,sign_lep+pid_lep,pid_nu)
+                    br = f"hnl.get_3body_dbr_tau({pid_parent},{sign_lep+pid_lep},{pid_nu})"
                     dic = {'label': label, 'pid0': pid_parent,'pid1': sign_lep+pid_lep,'pid2': pid_nu, 'br': br,'integration': integration, 'description': description.replace("l",lep[pid_lep])} 
                     dic_3body_mode["3body_tau_nutau"].append(dic)
                     dic_3body_parent[r"$\tau$"].append(dic)
@@ -1248,7 +1253,7 @@ class HNLCalc(Utility):
                     if self.vcoupling["15"] <1e-9: continue
                     integration = "dE"
                     label = "3body_tau_" + pid_parent + "_" +sign_lep+pid_lep+ "_" + pid_nu
-                    br =  self.get_3body_dbr_tau(pid_parent,sign_lep+pid_lep,pid_nu)
+                    br =  f"hnl.get_3body_dbr_tau({pid_parent},{sign_lep+pid_lep},{pid_nu})"
                     dic = {'label': label, 'pid0': pid_parent,'pid1': sign_lep+pid_lep,'pid2': pid_nu, 'br': br,'integration': integration, 'description': description.replace("l",lep[pid_lep])} 
                     dic_3body_mode["3body_tau"].append(dic)
                     dic_3body_parent[r"$\tau$"].append(dic)
