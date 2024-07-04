@@ -86,6 +86,8 @@ class Utility():
             return self.integrate_3body_br_3body_dq2dE(br, coupling, m0, m1, m2, mass, nsample)
         if integration == "dE":
             return self.integrate_3body_br_3body_dE(br, coupling, m0, m1, m2, mass, nsample)
+        if integration == 'dq2dm122':
+            return self.integrate_3body_br_3body_dq2dm122(br, coupling, m0, m1, m2, mass, nsample)
 
     
     def integrate_3body_br_3body_dq2dE(self,br, coupling, m0, m1, m2, mass, nsample):
@@ -112,6 +114,30 @@ class Utility():
             integral += eval(br)*(q2max-q2min)*(ENmax-ENmin)/float(nsample)
 
         return integral
+
+
+    def integrate_3body_br_3body_dq2dm122(self,br, coupling, m0, m1, m2, mass, nsample):
+            #integration boundary
+            m3 = mass
+            m12sqmin, m12sqmax = (m1+m2)**2, (m0-m3)**2
+            #numerical integration
+            integral=0
+            for i in range(nsample):
+                    # sample q2
+                    m12sq = random.uniform(m12sqmin,m12sqmax)
+
+                    # sample energy
+                    E2st = (m12sq - m1**2 + m2**2)/(2*np.sqrt(m12sq))
+                    E3st = (m0**2 - m12sq - m3**2)/(2*np.sqrt(m12sq))
+                    m232min = (E2st + E3st)**2 - (np.sqrt(E2st**2 - m2**2) + np.sqrt(E3st**2 - m3**2))**2
+                    m232max = (E2st + E3st)**2 - (np.sqrt(E2st**2 - m2**2) - np.sqrt(E3st**2 - m3**2))**2
+                    #q2 is m23sq
+                    q2 = random.uniform(m232min,m232max)
+                    #branching fraction
+                    #print(eval(br))
+                    integral += eval(br)*(m232max-m232min)*(m12sqmax-m12sqmin)/float(nsample)
+
+            return integral
 
     
     def integrate_3body_br_3body_dE(self, br, coupling, m0, m1, m2, mass, nsample):
@@ -228,6 +254,11 @@ class HNLCalc(Utility):
         elif pid in ["3322","-3322"]: return 2.90*10**-10
         elif pid in ["3312","-3312"]: return 1.639*10**-10
         elif pid in ["3334","-3334"]: return 8.21*10**-11
+        elif pid in ["4122","-4122"]: return 201.5*10**-15
+        elif pid in ["5122","-5122"]: return 1.471*10**-12
+        elif pid in ["4132","-4132"]: return 151.9*10**-15
+        elif pid in ["5232","-5232"]: return 1.48*10**-12
+        elif pid in ["5332","-5332"]: return 1.64*10**-12
 
     # CKM matrix elements
     def VH(self,pid):
@@ -290,9 +321,6 @@ class HNLCalc(Utility):
         elif pid in ["323"]: return r"$K^{*+}$"
         elif pid in ["413"]: return r"$D^{*+}$"
         elif pid in ["433"]: return r"$D^{*+}_s$"
-
-
-
 
     #for HNL decays to neutral vector mesons
     def kV(self,pid):
@@ -433,15 +461,16 @@ class HNLCalc(Utility):
         elif pid0 in ['541','-541'] and pid1 in ['443','-443']: return V45
         elif pid0 in ['421','-421'] and pid1 in ['213','-213']: return V41
         elif pid0 in ['411','-411'] and pid1 in ['113','-113',"223","-223"]: return V41 
-
         elif pid0 in ['411','-411'] and pid1 in ['313','-313']: return V43
-
         elif pid0 in ['431','-431'] and pid1 in ['313','-313']: return V41
         elif pid0 in ['431','-431'] and pid1 in ['333','-333']: return V43
         elif pid0 in ['511','-511'] and pid1 in ['213','-213']: return V25
         elif pid0 in ['531','-531'] and pid1 in ['323','-323']: return V25
         elif pid0 in ['541','-541'] and pid1 in ['423','-423']: return V25
 
+        #Baryons
+        elif pid0 in ["4122","-4122","4132","-4132"] and pid1 in ["3122", "-3122", "3312", "-3312"]: return V43  #Vcs
+        elif pid0 in ["5122", "-5122", "5232","-5232", "5332", "-5332"] and pid1 in ["4122", "-4122", "4232", "-4232", "4332", "-4332"]: return V45   #Vcb
 
 
     #3-body differential branching fraction dBr/(dq^2dE) for decay of pseudoscalar to pseudoscalar meson
@@ -627,6 +656,10 @@ class HNLCalc(Utility):
     #3-body differential branching fraction dBr/(dq^2dE) for decay of pseudoscalar to vector meson
     #pid0 is parent meson pid1 is daughter meson pid2 is lepton pid3 is HNL
     def get_3body_dbr_vector(self,pid0,pid1,pid2):
+        pid0 = str(pid0)
+        pid1 = str(pid1)
+        pid2 = str(pid2)
+        
         tauH=self.tau(pid0)
         SecToGev=1./(6.58*pow(10.,-25.))
         tauH=tauH*SecToGev
@@ -876,6 +909,10 @@ class HNLCalc(Utility):
     #pid0 is tau, pid1 is produced lepton and pid2 is the neutrino
     #3-body differential branching fraction dBr/(dE) for 3-body leptonic decay of tau lepton
     def get_3body_dbr_tau(self,pid0,pid1,pid2):
+        pid0 = str(pid0)
+        pid1 = str(pid1)
+        pid2 = str(pid2)
+
         m0=self.masses(pid0)
         m1=self.masses(pid1)
         if pid2=='16' or pid2=='-16':
@@ -890,6 +927,158 @@ class HNLCalc(Utility):
             GF=1.166378*10**(-5) #GeV^(-2)
             prefactor=f"({tautau}*{GF}**2*coupling**2*{m0}**2/(4*np.pi**3))*{self.vcoupling[str(abs(int(pid0)))]}**2"
             dbr=f"{prefactor}*(1-{m1}**2/({m0}**2+mass**2-2*energy*{m0}))**2*np.sqrt(energy**2-mass**2)*(({m0}-energy)*(1-(mass**2+{m1}**2)/{m0}**2)-(1-{m1}**2/({m0}**2+mass**2-2*energy*{m0}))*(({m0}-energy)**2/{m0}+((energy**2-mass**2)/(3*{m0}))))"
+        return(dbr)
+    
+    def get_3body_dbr_baryon(self,pid0,pid1,pid2):
+        pid0 = str(pid0)
+        pid1 = str(pid1)
+        pid2 = str(pid2)
+
+        GF = 1.166378*10**(-5)
+        m0 = self.masses(pid0)
+        m1 = self.masses(pid1)
+        m2 = self.masses(pid2)
+        Vckm = self.VHHp(pid0,pid1)
+        #parent baryon lifetime
+        tauB = self.tau(pid0)   #seconds
+        SecToGev=1./(6.582122*pow(10.,-25.))
+        tauB = tauB*SecToGev    #1/GeV
+        Ulx = self.vcoupling[str(abs(int(pid2)))]**2
+
+        #\Lambda_c^+ \to \Lambda^0
+        #4122 to 3122
+        if str(abs(int(pid0))) == '4122':
+            #Vcs = 0.975
+            #tauB = 201.5*10**(-15)
+            #m0 = 2.28646
+            #m1 = 1.115683
+            #form factor masses
+            MV = 2.11
+            MA = 2.54
+            #form factor coefficients
+            f10 = 0.29
+            f20 = 0.14
+            f30 = 0.03
+            g10 = 0.38
+            g20 = 0.03
+            g30 = 0.19
+
+        #\Lambda_b^0 \to \Lambda_c^+
+        #5122 to 4122
+        if str(abs(int(pid0))) == '5122':
+            #Vcs = 41*10**(-3)
+            #tauB = 1.471*10**(-12)
+            #m0 = 5.6196
+            #m1 = 2.28646
+            #form factor masses
+            MV = 6.34
+            MA = 6.73
+            #form factor coefficients
+            f10 = 0.53
+            f20 = 0.12
+            f30 = 0.02
+            g10 = 0.58
+            g20 = 0.02
+            g30 = 0.13
+
+        #\Xi^0 \to \Xi^-
+        #4132 to 3312
+        if str(abs(int(pid0))) == '4132':
+            #c->s for ckm and pole masses
+            #Vcs = 0.975
+            #tauB = 1.53*10**(-13)
+            #m0 = 2.47090
+            #m1 = 1.32171
+            #form factor masses
+            MV = 2.11
+            MA = 2.54
+            #form factor coefficients
+            f10 = 0.31
+            f20 = 0.19
+            f30 = 0.04
+            g10 = 0.39
+            g20 = 0.06
+            g30 = 0.24
+
+        #\Xi^0_b \to \Xi_c^+
+        #5232 to 4232
+        if str(abs(int(pid0))) == '5232':
+            #b->c for ckm and pole masses
+            #Vcs = 40.8*10**(-3)
+            #tauB = 1.48*10**(-12)
+            #m0 = 5.7919
+            #m1 = 2.46794
+            #form factor masses
+            MV = 6.34
+            MA = 6.73
+            #form factor coefficients
+            f10 = 0.54
+            f20 = 0.14
+            f30 = 0.02
+            g10 = 0.58
+            g20 = 0.03
+            g30 = 0.16
+
+        #\Omega_b^- \to \Omega_c^0
+        #5332 to 4332
+        if str(abs(int(pid0))) == '5332':
+            #b->c for ckm and pole masses
+            #Vcs = 40.8*10**(-3)
+            #tauB = 1.64*10**(-12)
+            #m0 = 6.0461
+            #m1 = 2.6952
+            #form factor masses
+            MV = 6.34
+            MA = 6.73
+            #form factor coefficients
+            f10 = 0.72
+            f20 = -0.68
+            f30 = 0.36
+            g10 = -0.20
+            g20 = -0.01
+            g30 = -0.06
+
+
+        kNkl = f"(q2 - {m2}**2 - mass**2)*(1/2)"
+        qkl = f"(-({m2}**2 + " + str(kNkl) + "))"
+        qkN = "(-(" + str(kNkl) + f"+mass**2))"
+        #m12sq = f"({m0}**2 + mass**2 - 2*{m0}*energy)"
+        #PBpkl = "(" + str(m12sq) + f"-{m1}**2-{m2}**2)*(1/2)"
+        PBpkl = "(m12sq" + f"-{m1}**2-{m2}**2)*(1/2)"
+        energy = f"(-(1/(2*{m0}))*(m12sq-{m0}**2-mass**2))"
+        PBpkN = f"({m0}*{energy}-" + str(kNkl) + f"-mass**2)"
+        PBpq = "(-(" + str(PBpkl) + "+" + str(PBpkN) + "))"
+
+
+
+        #form factors
+        f1 = f"({f10}/(1-q2/{MV}**2)**2)"
+        f2 = f"({f20}/(1-q2/{MV}**2)**2)"
+        f3 = f"({f30}/(1-q2/{MV}**2)**2)"
+        g1 = f"({g10}/(1-q2/{MA}**2)**2)"
+        g2 = f"({g20}/(1-q2/{MA}**2)**2)"
+        g3 = f"({g30}/(1-q2/{MA}**2)**2)"
+
+        #spin averaged amplitude squared
+        Msq1 = f"{tauB}*8*{GF}**2*{Vckm}**2*{Ulx}**2*coupling**2*((" + str(f1) + "**2+" + str(g1) + "**2)*(4*" + str(PBpkN) + "*" + str(PBpkl) + "-2*" + str(PBpkN) + "*" + str(qkl) + "-2*" + str(PBpkl) + "*" + str(qkN) + ")"
+        Msq2 = f"-2*(" + str(f1) + "**2-" + str(g1) + f"**2)*{m1}*{m0}*" + str(kNkl)
+        Msq3 = f"+(2*{m1}/{m0})*(" + str(f1) + "*" + str(f2) + "+" + str(g1) + "*" + str(g2) + ")*(" + str(kNkl) + "*(" + str(PBpq) + "-q2)+" + str(qkN) + "*(" + str(PBpkl) + "-" + str(qkl) + ")+" + str(qkl) + "*(" + str(PBpkN) + "-" + str(qkN) + "))"
+        Msq4 = f"-2*(" + str(f1) + "*" + str(f2) + "-" + str(g1) + "*" + str(g2) + ")*(" + str(PBpkl) + "*" + str(qkN) + "+" + str(PBpkN) + "*" + str(qkl) + "+" + str(PBpq) + "*" + str(kNkl) + ")"
+        Msq5 = f"-((" + str(f2) + "**2+" + str(g2) + f"**2)/{m0}**2)*(4*" + str(PBpkN) + "*" + str(PBpkl) + "*q2-4*" + str(PBpq) + "*(" + str(PBpkl) + "*" + str(qkN) + "+" + str(PBpkN) + "*" + str(qkl) + ")"
+        Msq6 = f"-2*" + str(kNkl) + "*(2*(" + str(PBpq) + f")**2-q2*{m1}**2-" + str(PBpq) + "*q2)+2*" + str(qkN) + "*" + str(qkl) + "*(" + str(PBpq) + f"+{m1}**2)"
+        Msq7 = f"-3*{m1}**2*q2*" + str(kNkl) + "+4*(" + str(PBpq) + ")**2*" + str(kNkl) + "-" + str(PBpq) + "*q2*" + str(kNkl) + ")"
+        Msq8 = f"-({m1}/{m0})*(" + str(f2) + "**2-" + str(g2) + "**2)*(q2*" + str(kNkl) + "+2*" + str(qkN) + "*" + str(qkl) + ")"
+        Msq9 = f"+({m1}/{m0})*(" + str(f1) + "*" + str(f3) + "+" + str(g1) + "*" + str(g3) + f")*(2*" + str(qkN) + "*(" + str(PBpkl) + "-" + str(qkl) + ")+2*" + str(qkl) + "*(" + str(PBpkN) + "-" + str(qkN) + ")-2*" + str(kNkl) + "*(" + str(PBpq) + "-q2))"
+        Msq10 = f"+(" + str(f1) + "*" + str(f3) + "-" + str(g1) + "*" + str(g3) + ")*(2*" + str(PBpkl) + "*" + str(qkN) + "+2*" + str(PBpkN) + "*" + str(qkl) + "-2*" + str(PBpq) + "*" + str(kNkl) + ")"
+        Msq11 = f"+2*((" + str(f2) + "*" + str(f3) + "+" + str(g2) + "*" + str(g3) + f")/{m0}**2)*(q2*(" + str(PBpkl) + "*" + str(qkN) + "+" + str(PBpkN) + "*" + str(qkl) + ")-2*" + str(PBpq) + "*" + str(qkl) + "*" + str(qkN) + ")"
+        Msq12 = f"-(" + str(f3) + f"**2/{m0}**2)*(2*" + str(qkN) + "*" + str(qkl) + "-q2*" + str(kNkl) + ")*(" + str(PBpq) + f"-{m1}*({m0}+{m1}))"
+        Msq13 = f"-(" + str(g3) + f"**2/{m0}**2)*(2*" + str(qkN) + "*" + str(qkl) + "-q2*" + str(kNkl) + ")*(" + str(PBpq) + f"+{m1}*({m0}-{m1}))"
+        Msq14 = f"+4*(" + str(PBpkl) + "*" + str(qkN) + "-" + str(PBpkN) + "*" + str(qkl) + ")"
+        Msq15 = f"*(" + str(g1) + "*" + str(f1) + "+(" + str(g2) + "*" + str(f2) + f"/{m0}**2)*(2*" + str(PBpq) + "-q2)-" + str(f1) + "*" + str(g2) + f"*(1-({m1}/{m0}))+" + str(f2) + "*" + str(g1) + f"*(1+({m1}/{m0}))))"
+
+        Msq = Msq1+Msq2+Msq3+Msq4+Msq5+Msq6+Msq7+Msq8+Msq9+Msq10+Msq11+Msq12+Msq13+Msq14+Msq15
+ 
+        dbr = f"(1/((2*np.pi)**3*32*{m0}**3))*" + Msq
         return(dbr)
 
     #finds the total br for a given parent particle and returns masses, br_tot
@@ -1001,6 +1190,7 @@ class HNLCalc(Utility):
         dic_2body_mode = {"2body_pseudo": [], "2body_tau": []}
         dic_2body_parent = {r"$\pi$": [], r"$K$": [], r"$D$": [], r"$D_s$": [], r"$B$": [], r"$B_c$": [], r"$\tau$": []}
         
+        #last sign is for the lepton
         channels_2body = [
             [r'$D^+ \to l^+ + N$'    , '411', '-'],
             [r'$D^- \to l^- + N$'    ,'-411', '' ],
@@ -1016,6 +1206,7 @@ class HNLCalc(Utility):
             [r'$K^- \to + l^- + N$'  ,'-321', '' ],
         ]
         
+        #last sign is for the pion
         channels_2body_tau = [
             [r'$\tau^- \to \pi^- + N$' , '15','211', '-' ],
             [r'$\tau^+ \to \pi^+ + N$' ,'-15','211', ''  ],
@@ -1065,8 +1256,10 @@ class HNLCalc(Utility):
         
         lep = {"11":r"e","13":r"\mu","15":r"\tau"}
 
-        dic_3body_mode = {"3body_pseudo": [], "3body_vector": [], "3body_tau": [], "3body_tau_nutau": []}
-        dic_3body_parent = {r"$\pi$": [], r"$K$": [], r"$K_S$": [], r"$K_L$": [], r"$D$": [], r"$D_0$": [], r"$D_s$": [], r"$B$": [], r"$B_0$": [], r"$B^0_s$": [], r"$B_c$": [], r"$\tau$": []}
+        dic_3body_mode = {"3body_pseudo": [], "3body_vector": [], "3body_baryon": [], "3body_tau": [], "3body_tau_nutau": []}
+        dic_3body_parent = {r"$\pi$": [], r"$K$": [], r"$K_S$": [], r"$K_L$": [], r"$D$": [], r"$D_0$": [], r"$D_s$": [], r"$B$": [], r"$B_0$": [], r"$B^0_s$": [], r"$B_c$": [], r"$\tau$": [], r"$\Lambda$": [], r"$\Xi$": [], r"$\Omega$": []}
+        
+        #last sign is for the lepton
         channels_pseudo = [
             [r'$D^0 \to K^- + l^+ + N$'             , '421' , '-321' , '-'],
             [r'$D^0 \to K^+ + l^- + N$'             , '-421', '321'  , '' ],
@@ -1117,6 +1310,8 @@ class HNLCalc(Utility):
             [r'$B^+ \to \eta\' + l^+ + N$'          , '521' , '331'  , '-'],
             [r'$B^- \to \eta\' + l^- + N$'          , '-521' , '331'  , '']
         ]
+        
+        #last sign is for the lepton
         channels_vector = [
             [r'$D^0 \to K^{*-} + l^+ + N$'                  ,'421' ,'-323', '-' ],
             [r'$D^0 \to K^{*+} + l^- + N$'                  ,'-421', '323', ''  ],
@@ -1154,6 +1349,19 @@ class HNLCalc(Utility):
             [r'$D^+ \to \omega + l^+ + N$'                  , '411', '223', '-' ],
             [r'$B^- \to \omega + l^- + N$'                  ,'-521', '223', ''  ],
             [r'$B^+ \to \omega + l^+ + N$'                  , '521', '223', '-' ],
+        ]
+
+        channels_baryon = [
+            [r'$\Lambda^-_c \to \Lambda^0 + l^- + N$'  ,'-4122' ,'3122'  ,'' ],
+            [r'$\Lambda^+_c \to \Lambda^0 + l^+ + N$'  ,'4122'  ,'3122'  ,'-'],
+            [r'$\Lambda^0_b \to \Lambda_c^+ + l^- + N$','5122'  ,'4122'  ,'' ],
+            [r'$\Lambda^0_b \to \Lambda_c^- + l^+ + N$','5122'  ,'-4122' ,'-'],
+            [r'$\Xi^0_c \to \Xi^+ + l^- + N$'          ,'4132'  ,'3312'  ,'' ],
+            [r'$\Xi^0_c \to \Xi^- + l^+ + N$'          ,'4132'  ,'-3312' ,'-'],
+            [r'$\Xi^0_b \to \Xi^+_c + l^- + N$'        ,'5232'  ,'4232'  ,'' ],
+            [r'$\Xi^0_b \to \Xi^-_c + l^+ + N$'        ,'5232'  ,'-4232' ,'-'],
+            [r'$\Omega_b^- \to \Omega_c^0 + l^- + N$'  ,'-5332' ,'4332'  ,'' ],
+            [r'$\Omega_b^+ \to \Omega_c^0 + l^+ + N$'  ,'5332'  ,'4332'  ,'-']
         ]
 
         channels_tau_1 =  [
@@ -1235,6 +1443,23 @@ class HNLCalc(Utility):
                     dic_3body_parent[r"$B^0_s$"].append(dic)
                 if str(abs(int(pid_parent))) in ["541"]:
                     dic_3body_parent[r"$B_c$"].append(dic)
+
+        #Baryons
+        for description, pid_parent, pid_daughter, sign_lep in channels_baryon: 
+            for pid_lep in ["11","13","15"]:
+                if self.vcoupling[pid_lep] <1e-9: continue
+                integration = "dq2dm122"
+                label = "3body_baryon_" + pid_parent + "_" +pid_daughter+ "_" + sign_lep+pid_lep
+                br =  f"hnl.get_3body_dbr_baryon({pid_parent},{pid_daughter},{sign_lep+pid_lep})"
+                dic = {'label': label, 'pid0': pid_parent,'pid1': pid_daughter,'pid2': sign_lep+pid_lep, 'br': br,'integration': integration, 'description': description.replace("l",lep[pid_lep])} 
+                dic_3body_mode["3body_baryon"].append(dic)
+                #group by parent
+                if str(abs(int(pid_parent))) in ["4122","5122"]:
+                    dic_3body_parent[r"$\Lambda$"].append(dic)
+                if str(abs(int(pid_parent))) in ["4132","5232"]:
+                    dic_3body_parent[r"$\Xi$"].append(dic)
+                if str(abs(int(pid_parent))) in ["5332"]:
+                    dic_3body_parent[r"$\Omega$"].append(dic)
 
         #Tau
         for description, pid_parent, pid_nu, sign_lep in channels_tau_1: 
