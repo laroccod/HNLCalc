@@ -1,6 +1,6 @@
 # HNLCalc: Heavy Neutral Lepton Calculator
 
-**By Alec Hewitt and Daniel La Rocco**
+**Jonathan L. Feng, Alec Hewitt, Felix Kling, and Daniel La Rocco**
 
 
 ## Introduction
