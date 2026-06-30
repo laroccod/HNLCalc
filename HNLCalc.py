@@ -12,7 +12,7 @@ import math
 import random
 import time
 import types
-from skhep.math.vectors import LorentzVector, Vector3D
+# from skhep.math.vectors import LorentzVector, Vector3D
 from scipy import interpolate
 from matplotlib import gridspec
 from numba import jit
@@ -393,7 +393,7 @@ class HNLCalc(Utility):
             M1=self.masses(pid1)
             prefactor=(tautau*GF**2*VH**2*fH**2*Mtau**3/(16*np.pi))
             prefactor*=(self.vcoupling[str(abs(int(pid0)))]**2)
-            br=f"{prefactor}*coupling**2*((1-(mass**2/{Mtau}**2))**2-({M1}**2/{Mtau}**2)*(1+(mass**2/{Mtau}**2)))*np.sqrt((1-(({M1}-mass)**2/{Mtau}**2)*(1-(({M1}+mass)**2/{Mtau}**2))))"
+            br=f"{prefactor}*coupling**2*((1-(mass**2/{Mtau}**2))**2-({M1}**2/{Mtau}**2)*(1+(mass**2/{Mtau}**2)))*np.sqrt((1-(({M1}-mass)**2/{Mtau}**2))*(1-(({M1}+mass)**2/{Mtau}**2)))"
         return (br)
 
     ###############################
@@ -501,12 +501,6 @@ class HNLCalc(Utility):
         if pid0 in ["421","-421"] and pid1 in ["321","-321"]:
             pidV, pidS = "433", "431"
             f00, MV, MS = .747, self.masses(pidV), self.masses(pidS)      
-            fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
-            f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
-        #Ds+ -> K0
-        if pid0 in ["431","-431"] and pid1 in ["311","-311"]:
-            pidV, pidS = "413", "411"
-            f00, MV, MS = .747, self.masses(pidV), self.masses(pidS)     
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
             f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
         #B0 -> D+
@@ -943,7 +937,7 @@ class HNLCalc(Utility):
         tauB = self.tau(pid0)   #seconds
         SecToGev=1./(6.582122*pow(10.,-25.))
         tauB = tauB*SecToGev    #1/GeV
-        Ulx = self.vcoupling[str(abs(int(pid2)))]**2
+        Ulx = self.vcoupling[str(abs(int(pid2)))]
 
         #\Lambda_c^+ \to \Lambda^0
         #4122 to 3122
