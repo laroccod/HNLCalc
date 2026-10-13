@@ -12,7 +12,6 @@ import math
 import random
 import time
 import types
-from skhep.math.vectors import LorentzVector, Vector3D
 from scipy import interpolate
 from matplotlib import gridspec
 from numba import jit
@@ -21,6 +20,9 @@ from cycler import cycler
 
 
 
+
+
+GF = 1.1663788e-5  # Fermi constant (GeV^-2), PDG
 
 
 class Utility():
@@ -218,17 +220,17 @@ class HNLCalc(Utility):
         elif pid in ["313","-313","323","-323"]: return 0.204 
         elif pid in ["311","-311","321","-321"]: return 0.1564 
         elif pid in ["331","-331"]: return -0.0957
-        elif pid in ["421","-421","411","-411"]: return 0.2226 
+        elif pid in ["421","-421","411","-411"]: return 0.2120 # FLAG 2024, arXiv:2411.04268
         elif pid in ["443"]: return 0.409         
-        elif pid in ["431","-431"]: return 0.2801
+        elif pid in ["431","-431"]: return 0.2499 # FLAG 2024, arXiv:2411.04268
         elif pid in ["511", "511","521","-521"]: return 0.190
         elif pid in ["513","-513"]: return 1.027*0.190
         elif pid in ["531","-531"]: return 0.230  
         elif pid in ["523","-523"]: return 1.027*0.190
         elif pid in ["533","-533"]: return 1.028*0.230        
         elif pid in ["541","-541"]: return 0.480
-        elif pid in ["413","-413","423","-423"]: return 1.097*0.2226 
-        elif pid in ["433","-433"]: return 1.093*0.2801
+        elif pid in ["413","-413","423","-423"]: return 1.097*0.2120 
+        elif pid in ["433","-433"]: return 1.093*0.2499
 
     # Lifetimes
     def tau(self,pid):
@@ -328,9 +330,6 @@ class HNLCalc(Utility):
         if pid in ["313","-313"]: return (-1/4+(1/3)*xw)
         elif pid in ["423","-423","443"]: return (1/4-(2/3)*xw)
     
-    def GF(self):
-        return 1.1663788*10**(-5)
-        
     def set_generators(self,generators_light, generators_heavy):
         self.generators = {
             211: generators_light,
@@ -360,7 +359,6 @@ class HNLCalc(Utility):
         vH, fH = self.VH(pid0), self.fH(pid0)
         SecToGev=1./(6.582122*pow(10.,-25.))
         tauH=tauH*SecToGev
-        GF=1.166378*10**(-5) #GeV^(-2)
         #calculate br
         prefactor=(tauH*GF**2*fH**2*vH**2)/(8*np.pi)
         prefactor*=self.vcoupling[str(abs(int(pid1)))]**2
@@ -377,7 +375,6 @@ class HNLCalc(Utility):
             Mtau, Mrho=self.masses(pid0), self.masses(pid1)
             SecToGev=1./(6.582122*pow(10.,-25.))
             tautau=tautau*SecToGev
-            GF=1.166378*10**(-5) #GeV^(-2)
             prefactor=(tautau*grho**2*GF**2*VH**2*Mtau**3/(8*np.pi*Mrho**2))
             prefactor*=(self.vcoupling[str(abs(int(pid0)))]**2)
             br=f"{prefactor}*coupling**2*((1-(mass**2/{Mtau}**2))**2+({Mrho}**2/{Mtau}**2)*(1+((mass**2-2*{Mrho}**2)/{Mtau}**2)))*np.sqrt((1-(({Mrho}-mass)**2/{Mtau}**2))*(1-(({Mrho}+mass)**2/{Mtau}**2)))"
@@ -386,14 +383,13 @@ class HNLCalc(Utility):
             SecToGev=1./(6.582122*pow(10.,-25.))
             tautau=self.tau(pid0)
             tautau=tautau*SecToGev
-            GF=1.166378*10**(-5) #GeV^(-2)
             VH=self.VH(pid1)
             fH=self.fH(pid1)
             Mtau=self.masses(pid0)
             M1=self.masses(pid1)
             prefactor=(tautau*GF**2*VH**2*fH**2*Mtau**3/(16*np.pi))
             prefactor*=(self.vcoupling[str(abs(int(pid0)))]**2)
-            br=f"{prefactor}*coupling**2*((1-(mass**2/{Mtau}**2))**2-({M1}**2/{Mtau}**2)*(1+(mass**2/{Mtau}**2)))*np.sqrt((1-(({M1}-mass)**2/{Mtau}**2)*(1-(({M1}+mass)**2/{Mtau}**2))))"
+            br=f"{prefactor}*coupling**2*((1-(mass**2/{Mtau}**2))**2-({M1}**2/{Mtau}**2)*(1+(mass**2/{Mtau}**2)))*np.sqrt((1-(({M1}-mass)**2/{Mtau}**2))*(1-(({M1}+mass)**2/{Mtau}**2)))"
         return (br)
 
     ###############################
@@ -485,7 +481,6 @@ class HNLCalc(Utility):
         VHHp, tauH = self.VHHp(pid0,pid1), self.tau(pid0)
         SecToGev=1./(6.582122*pow(10.,-25.))
         tauH=tauH*SecToGev
-        GF=1.166378*10**(-5) #GeV^(-2)
 
         #accounts for quark content of decay; only relevant for neutral mesons with several quark configurations
         cp=1
@@ -501,12 +496,6 @@ class HNLCalc(Utility):
         if pid0 in ["421","-421"] and pid1 in ["321","-321"]:
             pidV, pidS = "433", "431"
             f00, MV, MS = .747, self.masses(pidV), self.masses(pidS)      
-            fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
-            f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
-        #Ds+ -> K0
-        if pid0 in ["431","-431"] and pid1 in ["311","-311"]:
-            pidV, pidS = "413", "411"
-            f00, MV, MS = .747, self.masses(pidV), self.masses(pidS)     
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
             f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
         #B0 -> D+
@@ -663,7 +652,6 @@ class HNLCalc(Utility):
         tauH=self.tau(pid0)
         SecToGev=1./(6.58*pow(10.,-25.))
         tauH=tauH*SecToGev
-        GF=1.1663787*10**(-5)
         VHV=self.VHHp(pid0,pid1)
         m0=self.masses(pid0)
         m1=self.masses(pid1)
@@ -918,13 +906,11 @@ class HNLCalc(Utility):
         if pid2=='16' or pid2=='-16':
             SecToGev=1./(6.582122*pow(10.,-25.))
             tautau=self.tau(pid0)*SecToGev
-            GF=1.166378*10**(-5) #GeV^(-2)
             prefactor=f"({tautau}*{GF}**2*coupling**2*{m0}**2*energy/(2*np.pi**3))*{self.vcoupling[str(abs(int(pid1)))]}**2"
             dbr=f"{prefactor}*(1+((mass**2-{m1}**2)/{m0}**2)-2*(energy/{m0}))*(1-({m1}**2/({m0}**2+mass**2-2*energy*{m0})))*np.sqrt(energy**2-mass**2)"
         else:
             SecToGev=1./(6.582122*pow(10.,-25.))
             tautau=self.tau(pid0)*SecToGev
-            GF=1.166378*10**(-5) #GeV^(-2)
             prefactor=f"({tautau}*{GF}**2*coupling**2*{m0}**2/(4*np.pi**3))*{self.vcoupling[str(abs(int(pid0)))]}**2"
             dbr=f"{prefactor}*(1-{m1}**2/({m0}**2+mass**2-2*energy*{m0}))**2*np.sqrt(energy**2-mass**2)*(({m0}-energy)*(1-(mass**2+{m1}**2)/{m0}**2)-(1-{m1}**2/({m0}**2+mass**2-2*energy*{m0}))*(({m0}-energy)**2/{m0}+((energy**2-mass**2)/(3*{m0}))))"
         return(dbr)
@@ -934,7 +920,6 @@ class HNLCalc(Utility):
         pid1 = str(pid1)
         pid2 = str(pid2)
 
-        GF = 1.166378*10**(-5)
         m0 = self.masses(pid0)
         m1 = self.masses(pid1)
         m2 = self.masses(pid2)
@@ -943,7 +928,7 @@ class HNLCalc(Utility):
         tauB = self.tau(pid0)   #seconds
         SecToGev=1./(6.582122*pow(10.,-25.))
         tauB = tauB*SecToGev    #1/GeV
-        Ulx = self.vcoupling[str(abs(int(pid2)))]**2
+        Ulx = self.vcoupling[str(abs(int(pid2)))]
 
         #\Lambda_c^+ \to \Lambda^0
         #4122 to 3122
@@ -1542,7 +1527,7 @@ class HNLCalc(Utility):
                   'mu':couplings[1], 'anti_mu': couplings[1],
                   'tau':couplings[2], 'anti_tau': couplings[2]} 
         
-        self.Gf = 1.166378*10**(-5)
+        self.Gf = GF
         
         self.sin2w = 0.23121 
         
