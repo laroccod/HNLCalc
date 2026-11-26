@@ -186,6 +186,36 @@ class Utility():
 
 
 
+def _bcl_strings(tp, t0, m_plus, m_zero, a_plus, a_zero):
+    """f_+ and f_0 as strings in q for the BCL z-expansion of FLAG 2024 (arXiv:2411.04268, appendix B.3); the last
+    a_0 coefficient follows from f_+(0) = f_0(0). m_zero = 0: no pole in f_0."""
+    import math
+    def z_of(q2):
+        a, b = math.sqrt(tp - q2), math.sqrt(tp - t0)
+        return (a - b) / (a + b)
+    N = len(a_plus)
+    z0 = z_of(0.)
+    fp0 = sum(a * (z0**n - (-1)**(n - N) * n / N * z0**N) for n, a in enumerate(a_plus))
+    a_zero = list(a_zero) + [(fp0 - sum(a * z0**n for n, a in enumerate(a_zero))) / z0**len(a_zero)]
+    z = f"((np.sqrt({tp}-q**2)-np.sqrt({tp}-{t0}))/(np.sqrt({tp}-q**2)+np.sqrt({tp}-{t0})))"
+    fp = f"(1/(1-q**2/{m_plus}**2))*(" + "+".join(f"({a})*({z}**{n}-({(-1)**(n - N) * n / N})*{z}**{N})" for n, a in enumerate(a_plus)) + ")"
+    f0 = (f"(1/(1-q**2/{m_zero}**2))*(" if m_zero else "(") + "+".join(f"({a})*{z}**{n}" for n, a in enumerate(a_zero)) + ")"
+    return fp, f0
+
+
+def _flag_b_pi():
+    """B -> pi, FLAG 2024 table 50: t_+ = (m_B + m_pi)^2, t_0 = (m_B + m_pi)(sqrt(m_B) - sqrt(m_pi))^2, f_+ with the B* pole"""
+    mB, mpi = 5.27934, 0.1349768
+    return _bcl_strings((mB + mpi)**2, (mB + mpi) * (mB**0.5 - mpi**0.5)**2, 5.32471, 0., [0.425, -0.441, -0.52], [0.560, -1.346])
+
+
+def _flag_bs_k():
+    """B_s -> K, FLAG 2024 table 40: t_+ = (m_B + m_pi)^2, t_0 = t_+ - sqrt(t_+ (t_+ - t_-)), poles B* and B*(0+)"""
+    mB, mpi, mBs, mK = 5.27931, 0.1349766, 5.36688, 0.493677
+    tp, tm = (mB + mpi)**2, (mBs - mK)**2
+    return _bcl_strings(tp, tp - (tp * (tp - tm))**0.5, 5.3251, 5.68, [0.370, -0.68, 0.55, 2.11], [0.234, 0.135, 0.20])
+
+
 class HNLCalc(Utility):
 
     ###############################
@@ -575,8 +605,7 @@ class HNLCalc(Utility):
             cp=1/2
             pidV, pidS = "513","511"
             f00, MV, MS = 0.29, self.masses(pidV), self.masses(pidS)
-            fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
-            f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
+            fp, f0 = _flag_b_pi()  # FLAG 2024 (arXiv:2411.04268); the old f_0 had its pole at m_B
         #B_c^+ \to \eta_c
         if pid0 in ["541","-541"] and pid1 in ["441","-441"]:
             pidV, pidS = "543","541"
@@ -619,8 +648,7 @@ class HNLCalc(Utility):
         if pid0 in ["511","-511"] and pid1 in ["211","-211"]:
             pidV, pidS = "523", "521"
             f00, MV, MS = 0.29, self.masses(pidV), self.masses(pidS)
-            fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
-            f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
+            fp, f0 = _flag_b_pi()  # FLAG 2024 (arXiv:2411.04268); the old f_0 had its pole at m_B
         #B- -> eta, etap
         if pid0 in ["521","-521"] and pid1 in ["221","-221","331","-331"]:
             theta=-11.5*np.pi/180
@@ -632,14 +660,12 @@ class HNLCalc(Utility):
                 cp = ((np.sin(theta)/np.sqrt(6)) + (np.cos(theta)/np.sqrt(3)))**2
             pidV, pidS = "523", "521"
             f00, MV, MS = 0.29, self.masses(pidV), self.masses(pidS)
-            fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
-            f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
+            fp, f0 = _flag_b_pi()  # FLAG 2024 (arXiv:2411.04268); the old f_0 had its pole at m_B
         #B_s^0 \to K^+
         if pid0 in ["531","-531"] and pid1 in ["321","-321"]:
             pidV, pidS = "523", "521"
             f00, MV, MS = 0.31, self.masses(pidV), self.masses(pidS)
-            fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
-            f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
+            fp, f0 = _flag_bs_k()  # FLAG 2024 (arXiv:2411.04268); the old f_0 had its pole at m_B
         # prefactor
         prefactor=(cp)*tauH*VHHp**2*GF**2/(64*np.pi**3*mH**2)
         prefactor*=self.vcoupling[str(abs(int(pid2)))]**2
