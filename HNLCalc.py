@@ -764,15 +764,19 @@ class HNLCalc(Utility):
             #form factors for A1 and A2
             A1=f"({A10}/(1-({s1A1}*q**2/{MV}**2)+({s2A1}*q**4/{MV}**4)))"
             A2=f"({A20}/(1-({s1A2}*q**2/{MV}**2)+({s2A2}*q**4/{MV}**4)))"
-        #Bc+ to J/psi
+        #Bc+ to J/psi: hep-ph/0007169, tables III and VIII. Their A1, A2, V are the usual ones; their A3 multiplies
+        #(p-p')^mu p.eps/(mBc+mJpsi), so A0 = ((mBc+mJpsi) A1 - (mBc-mJpsi) A2)/(2 mJpsi) - q^2 A3/(2 mJpsi (mBc+mJpsi))
         if pid0 in ['541','-541'] and pid1 in ['443','-443']:
-            A00=0.68; mfitA0=8.20; deltaA0=1.40; V0=0.96; mfitV=5.65; deltaV= 0.0013      
-            A10=0.68; mfitA1=5.91; deltaA1=0.052; A20=-0.004; mfitA2=5.67; deltaA2=-0.004
-            A0=f"({A00}/(1-(q**2/{mfitA0}**2)-{deltaA0}*(q**2/{mfitA0}**2)**2))"
+            mP = self.masses('541'); mV = self.masses('443')
+            V0=0.96; mfitV=5.65; deltaV=0.0013
+            A10=0.68; mfitA1=8.20; deltaA1=1.40; A20=0.66; mfitA2=5.91; deltaA2=0.052
+            A30=-1.13; mfitA3=5.67; deltaA3=-0.004
             V=f"({V0}/(1-(q**2/{mfitV}**2)-{deltaV}*(q**2/{mfitV}**2)**2))"
             #form factors for A1 and A2
             A1=f"({A10}/(1-(q**2/{mfitA1}**2)-{deltaA1}*(q**2/{mfitA1}**2)**2))"
             A2=f"({A20}/(1-(q**2/{mfitA2}**2)-{deltaA2}*(q**2/{mfitA2}**2)**2))"
+            A3=f"({A30}/(1-(q**2/{mfitA3}**2)-{deltaA3}*(q**2/{mfitA3}**2)**2))"
+            A0=f"((({mP}+{mV})*{A1}-({mP}-{mV})*{A2})/(2*{mV})-q**2*{A3}/(2*{mV}*({mP}+{mV})))"
         #\bar{D^0} to \rho^+
         if pid0 in ["421","-421"] and pid1 in ["213","-213"]:      
             pidp = "411"
