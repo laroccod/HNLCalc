@@ -12,7 +12,6 @@ import math
 import random
 import time
 import types
-from skhep.math.vectors import LorentzVector, Vector3D
 from scipy import interpolate
 from matplotlib import gridspec
 from numba import jit
@@ -21,6 +20,9 @@ from cycler import cycler
 
 
 
+
+
+GF = 1.1663788e-5  # Fermi constant (GeV^-2), PDG
 
 
 class Utility():
@@ -186,6 +188,36 @@ class Utility():
 
 
 
+def _bcl_strings(tp, t0, m_plus, m_zero, a_plus, a_zero):
+    """f_+ and f_0 as strings in q for the BCL z-expansion of FLAG 2024 (arXiv:2411.04268, appendix B.3); the last
+    a_0 coefficient follows from f_+(0) = f_0(0). m_zero = 0: no pole in f_0."""
+    import math
+    def z_of(q2):
+        a, b = math.sqrt(tp - q2), math.sqrt(tp - t0)
+        return (a - b) / (a + b)
+    N = len(a_plus)
+    z0 = z_of(0.)
+    fp0 = sum(a * (z0**n - (-1)**(n - N) * n / N * z0**N) for n, a in enumerate(a_plus))
+    a_zero = list(a_zero) + [(fp0 - sum(a * z0**n for n, a in enumerate(a_zero))) / z0**len(a_zero)]
+    z = f"((np.sqrt({tp}-q**2)-np.sqrt({tp}-{t0}))/(np.sqrt({tp}-q**2)+np.sqrt({tp}-{t0})))"
+    fp = f"(1/(1-q**2/{m_plus}**2))*(" + "+".join(f"({a})*({z}**{n}-({(-1)**(n - N) * n / N})*{z}**{N})" for n, a in enumerate(a_plus)) + ")"
+    f0 = (f"(1/(1-q**2/{m_zero}**2))*(" if m_zero else "(") + "+".join(f"({a})*{z}**{n}" for n, a in enumerate(a_zero)) + ")"
+    return fp, f0
+
+
+def _flag_b_pi():
+    """B -> pi, FLAG 2024 table 50: t_+ = (m_B + m_pi)^2, t_0 = (m_B + m_pi)(sqrt(m_B) - sqrt(m_pi))^2, f_+ with the B* pole"""
+    mB, mpi = 5.27934, 0.1349768
+    return _bcl_strings((mB + mpi)**2, (mB + mpi) * (mB**0.5 - mpi**0.5)**2, 5.32471, 0., [0.425, -0.441, -0.52], [0.560, -1.346])
+
+
+def _flag_bs_k():
+    """B_s -> K, FLAG 2024 table 40: t_+ = (m_B + m_pi)^2, t_0 = t_+ - sqrt(t_+ (t_+ - t_-)), poles B* and B*(0+)"""
+    mB, mpi, mBs, mK = 5.27931, 0.1349766, 5.36688, 0.493677
+    tp, tm = (mB + mpi)**2, (mBs - mK)**2
+    return _bcl_strings(tp, tp - (tp * (tp - tm))**0.5, 5.3251, 5.68, [0.370, -0.68, 0.55, 2.11], [0.234, 0.135, 0.20])
+
+
 class HNLCalc(Utility):
 
     ###############################
@@ -218,17 +250,17 @@ class HNLCalc(Utility):
         elif pid in ["313","-313","323","-323"]: return 0.204 
         elif pid in ["311","-311","321","-321"]: return 0.1564 
         elif pid in ["331","-331"]: return -0.0957
-        elif pid in ["421","-421","411","-411"]: return 0.2226 
+        elif pid in ["421","-421","411","-411"]: return 0.2120 # FLAG 2024, arXiv:2411.04268
         elif pid in ["443"]: return 0.409         
-        elif pid in ["431","-431"]: return 0.2801
+        elif pid in ["431","-431"]: return 0.2499 # FLAG 2024, arXiv:2411.04268
         elif pid in ["511", "511","521","-521"]: return 0.190
         elif pid in ["513","-513"]: return 1.027*0.190
         elif pid in ["531","-531"]: return 0.230  
         elif pid in ["523","-523"]: return 1.027*0.190
         elif pid in ["533","-533"]: return 1.028*0.230        
         elif pid in ["541","-541"]: return 0.480
-        elif pid in ["413","-413","423","-423"]: return 1.097*0.2226 
-        elif pid in ["433","-433"]: return 1.093*0.2801
+        elif pid in ["413","-413","423","-423"]: return 1.097*0.2120 
+        elif pid in ["433","-433"]: return 1.093*0.2499
 
     # Lifetimes
     def tau(self,pid):
@@ -328,9 +360,6 @@ class HNLCalc(Utility):
         if pid in ["313","-313"]: return (-1/4+(1/3)*xw)
         elif pid in ["423","-423","443"]: return (1/4-(2/3)*xw)
     
-    def GF(self):
-        return 1.1663788*10**(-5)
-        
     def set_generators(self,generators_light, generators_heavy):
         self.generators = {
             211: generators_light,
@@ -360,7 +389,6 @@ class HNLCalc(Utility):
         vH, fH = self.VH(pid0), self.fH(pid0)
         SecToGev=1./(6.582122*pow(10.,-25.))
         tauH=tauH*SecToGev
-        GF=1.166378*10**(-5) #GeV^(-2)
         #calculate br
         prefactor=(tauH*GF**2*fH**2*vH**2)/(8*np.pi)
         prefactor*=self.vcoupling[str(abs(int(pid1)))]**2
@@ -377,7 +405,6 @@ class HNLCalc(Utility):
             Mtau, Mrho=self.masses(pid0), self.masses(pid1)
             SecToGev=1./(6.582122*pow(10.,-25.))
             tautau=tautau*SecToGev
-            GF=1.166378*10**(-5) #GeV^(-2)
             prefactor=(tautau*grho**2*GF**2*VH**2*Mtau**3/(8*np.pi*Mrho**2))
             prefactor*=(self.vcoupling[str(abs(int(pid0)))]**2)
             br=f"{prefactor}*coupling**2*((1-(mass**2/{Mtau}**2))**2+({Mrho}**2/{Mtau}**2)*(1+((mass**2-2*{Mrho}**2)/{Mtau}**2)))*np.sqrt((1-(({Mrho}-mass)**2/{Mtau}**2))*(1-(({Mrho}+mass)**2/{Mtau}**2)))"
@@ -386,14 +413,13 @@ class HNLCalc(Utility):
             SecToGev=1./(6.582122*pow(10.,-25.))
             tautau=self.tau(pid0)
             tautau=tautau*SecToGev
-            GF=1.166378*10**(-5) #GeV^(-2)
             VH=self.VH(pid1)
             fH=self.fH(pid1)
             Mtau=self.masses(pid0)
             M1=self.masses(pid1)
             prefactor=(tautau*GF**2*VH**2*fH**2*Mtau**3/(16*np.pi))
             prefactor*=(self.vcoupling[str(abs(int(pid0)))]**2)
-            br=f"{prefactor}*coupling**2*((1-(mass**2/{Mtau}**2))**2-({M1}**2/{Mtau}**2)*(1+(mass**2/{Mtau}**2)))*np.sqrt((1-(({M1}-mass)**2/{Mtau}**2)*(1-(({M1}+mass)**2/{Mtau}**2))))"
+            br=f"{prefactor}*coupling**2*((1-(mass**2/{Mtau}**2))**2-({M1}**2/{Mtau}**2)*(1+(mass**2/{Mtau}**2)))*np.sqrt((1-(({M1}-mass)**2/{Mtau}**2))*(1-(({M1}+mass)**2/{Mtau}**2)))"
         return (br)
 
     ###############################
@@ -485,7 +511,6 @@ class HNLCalc(Utility):
         VHHp, tauH = self.VHHp(pid0,pid1), self.tau(pid0)
         SecToGev=1./(6.582122*pow(10.,-25.))
         tauH=tauH*SecToGev
-        GF=1.166378*10**(-5) #GeV^(-2)
 
         #accounts for quark content of decay; only relevant for neutral mesons with several quark configurations
         cp=1
@@ -501,12 +526,6 @@ class HNLCalc(Utility):
         if pid0 in ["421","-421"] and pid1 in ["321","-321"]:
             pidV, pidS = "433", "431"
             f00, MV, MS = .747, self.masses(pidV), self.masses(pidS)      
-            fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
-            f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
-        #Ds+ -> K0
-        if pid0 in ["431","-431"] and pid1 in ["311","-311"]:
-            pidV, pidS = "413", "411"
-            f00, MV, MS = .747, self.masses(pidV), self.masses(pidS)     
             fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
             f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
         #B0 -> D+
@@ -575,8 +594,7 @@ class HNLCalc(Utility):
             cp=1/2
             pidV, pidS = "513","511"
             f00, MV, MS = 0.29, self.masses(pidV), self.masses(pidS)
-            fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
-            f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
+            fp, f0 = _flag_b_pi()  # FLAG 2024 (arXiv:2411.04268); the old f_0 had its pole at m_B
         #B_c^+ \to \eta_c
         if pid0 in ["541","-541"] and pid1 in ["441","-441"]:
             pidV, pidS = "543","541"
@@ -619,8 +637,7 @@ class HNLCalc(Utility):
         if pid0 in ["511","-511"] and pid1 in ["211","-211"]:
             pidV, pidS = "523", "521"
             f00, MV, MS = 0.29, self.masses(pidV), self.masses(pidS)
-            fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
-            f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
+            fp, f0 = _flag_b_pi()  # FLAG 2024 (arXiv:2411.04268); the old f_0 had its pole at m_B
         #B- -> eta, etap
         if pid0 in ["521","-521"] and pid1 in ["221","-221","331","-331"]:
             theta=-11.5*np.pi/180
@@ -632,14 +649,12 @@ class HNLCalc(Utility):
                 cp = ((np.sin(theta)/np.sqrt(6)) + (np.cos(theta)/np.sqrt(3)))**2
             pidV, pidS = "523", "521"
             f00, MV, MS = 0.29, self.masses(pidV), self.masses(pidS)
-            fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
-            f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
+            fp, f0 = _flag_b_pi()  # FLAG 2024 (arXiv:2411.04268); the old f_0 had its pole at m_B
         #B_s^0 \to K^+
         if pid0 in ["531","-531"] and pid1 in ["321","-321"]:
             pidV, pidS = "523", "521"
             f00, MV, MS = 0.31, self.masses(pidV), self.masses(pidS)
-            fp=str(f00)+"/(1-q**2/"+str(MV)+"**2)"
-            f0=str(f00)+"/(1-q**2/"+str(MS)+"**2)"
+            fp, f0 = _flag_bs_k()  # FLAG 2024 (arXiv:2411.04268); the old f_0 had its pole at m_B
         # prefactor
         prefactor=(cp)*tauH*VHHp**2*GF**2/(64*np.pi**3*mH**2)
         prefactor*=self.vcoupling[str(abs(int(pid2)))]**2
@@ -663,7 +678,6 @@ class HNLCalc(Utility):
         tauH=self.tau(pid0)
         SecToGev=1./(6.58*pow(10.,-25.))
         tauH=tauH*SecToGev
-        GF=1.1663787*10**(-5)
         VHV=self.VHHp(pid0,pid1)
         m0=self.masses(pid0)
         m1=self.masses(pid1)
@@ -764,15 +778,19 @@ class HNLCalc(Utility):
             #form factors for A1 and A2
             A1=f"({A10}/(1-({s1A1}*q**2/{MV}**2)+({s2A1}*q**4/{MV}**4)))"
             A2=f"({A20}/(1-({s1A2}*q**2/{MV}**2)+({s2A2}*q**4/{MV}**4)))"
-        #Bc+ to J/psi
+        #Bc+ to J/psi: hep-ph/0007169, tables III and VIII. Their A1, A2, V are the usual ones; their A3 multiplies
+        #(p-p')^mu p.eps/(mBc+mJpsi), so A0 = ((mBc+mJpsi) A1 - (mBc-mJpsi) A2)/(2 mJpsi) - q^2 A3/(2 mJpsi (mBc+mJpsi))
         if pid0 in ['541','-541'] and pid1 in ['443','-443']:
-            A00=0.68; mfitA0=8.20; deltaA0=1.40; V0=0.96; mfitV=5.65; deltaV= 0.0013      
-            A10=0.68; mfitA1=5.91; deltaA1=0.052; A20=-0.004; mfitA2=5.67; deltaA2=-0.004
-            A0=f"({A00}/(1-(q**2/{mfitA0}**2)-{deltaA0}*(q**2/{mfitA0}**2)**2))"
+            mP = self.masses('541'); mV = self.masses('443')
+            V0=0.96; mfitV=5.65; deltaV=0.0013
+            A10=0.68; mfitA1=8.20; deltaA1=1.40; A20=0.66; mfitA2=5.91; deltaA2=0.052
+            A30=-1.13; mfitA3=5.67; deltaA3=-0.004
             V=f"({V0}/(1-(q**2/{mfitV}**2)-{deltaV}*(q**2/{mfitV}**2)**2))"
             #form factors for A1 and A2
             A1=f"({A10}/(1-(q**2/{mfitA1}**2)-{deltaA1}*(q**2/{mfitA1}**2)**2))"
             A2=f"({A20}/(1-(q**2/{mfitA2}**2)-{deltaA2}*(q**2/{mfitA2}**2)**2))"
+            A3=f"({A30}/(1-(q**2/{mfitA3}**2)-{deltaA3}*(q**2/{mfitA3}**2)**2))"
+            A0=f"((({mP}+{mV})*{A1}-({mP}-{mV})*{A2})/(2*{mV})-q**2*{A3}/(2*{mV}*({mP}+{mV})))"
         #\bar{D^0} to \rho^+
         if pid0 in ["421","-421"] and pid1 in ["213","-213"]:      
             pidp = "411"
@@ -918,13 +936,11 @@ class HNLCalc(Utility):
         if pid2=='16' or pid2=='-16':
             SecToGev=1./(6.582122*pow(10.,-25.))
             tautau=self.tau(pid0)*SecToGev
-            GF=1.166378*10**(-5) #GeV^(-2)
             prefactor=f"({tautau}*{GF}**2*coupling**2*{m0}**2*energy/(2*np.pi**3))*{self.vcoupling[str(abs(int(pid1)))]}**2"
             dbr=f"{prefactor}*(1+((mass**2-{m1}**2)/{m0}**2)-2*(energy/{m0}))*(1-({m1}**2/({m0}**2+mass**2-2*energy*{m0})))*np.sqrt(energy**2-mass**2)"
         else:
             SecToGev=1./(6.582122*pow(10.,-25.))
             tautau=self.tau(pid0)*SecToGev
-            GF=1.166378*10**(-5) #GeV^(-2)
             prefactor=f"({tautau}*{GF}**2*coupling**2*{m0}**2/(4*np.pi**3))*{self.vcoupling[str(abs(int(pid0)))]}**2"
             dbr=f"{prefactor}*(1-{m1}**2/({m0}**2+mass**2-2*energy*{m0}))**2*np.sqrt(energy**2-mass**2)*(({m0}-energy)*(1-(mass**2+{m1}**2)/{m0}**2)-(1-{m1}**2/({m0}**2+mass**2-2*energy*{m0}))*(({m0}-energy)**2/{m0}+((energy**2-mass**2)/(3*{m0}))))"
         return(dbr)
@@ -934,7 +950,6 @@ class HNLCalc(Utility):
         pid1 = str(pid1)
         pid2 = str(pid2)
 
-        GF = 1.166378*10**(-5)
         m0 = self.masses(pid0)
         m1 = self.masses(pid1)
         m2 = self.masses(pid2)
@@ -943,7 +958,7 @@ class HNLCalc(Utility):
         tauB = self.tau(pid0)   #seconds
         SecToGev=1./(6.582122*pow(10.,-25.))
         tauB = tauB*SecToGev    #1/GeV
-        Ulx = self.vcoupling[str(abs(int(pid2)))]**2
+        Ulx = self.vcoupling[str(abs(int(pid2)))]
 
         #\Lambda_c^+ \to \Lambda^0
         #4122 to 3122
@@ -1542,7 +1557,7 @@ class HNLCalc(Utility):
                   'mu':couplings[1], 'anti_mu': couplings[1],
                   'tau':couplings[2], 'anti_tau': couplings[2]} 
         
-        self.Gf = 1.166378*10**(-5)
+        self.Gf = GF
         
         self.sin2w = 0.23121 
         
